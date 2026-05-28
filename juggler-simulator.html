@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ジャグラー シミュレーター</title>
+<link href="https://fonts.googleapis.com/css2?family=Boogaloo&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #1a0a2e; --panel: #0d0620; --gold: #ffd700; --red: #ff2244;
+    --green: #00ff88; --blue: #44aaff; --text: #f0e8ff; --muted: #7060a0;
+  }
+  body {
+    background: var(--bg);
+    background-image: radial-gradient(ellipse at 50% 0%, rgba(255,102,0,0.15) 0%, transparent 60%);
+    color: var(--text); font-family: 'Noto Sans JP', sans-serif;
+    min-height: 100vh; padding: 16px;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  h1 { font-family: 'Boogaloo', cursive; font-size: 36px; color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.6); letter-spacing: 4px; margin-bottom: 4px; text-align: center; }
+  .subtitle { font-size: 10px; color: var(--muted); letter-spacing: 3px; margin-bottom: 20px; text-align: center; }
+  .hidden { display: none; }
+
+  /* セットアップ */
+  .setup-screen { width: 100%; max-width: 360px; background: linear-gradient(180deg, #2a1050 0%, #150830 100%); border: 2px solid #3a2060; border-radius: 16px; padding: 24px 16px; box-shadow: 0 0 40px rgba(255,102,0,0.2); text-align: center; }
+  .setup-title { font-family: 'Boogaloo', cursive; font-size: 20px; color: var(--gold); letter-spacing: 2px; margin-bottom: 20px; }
+  .money-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .money-btn { all: unset; cursor: pointer; padding: 16px 8px; background: var(--panel); border: 2px solid #3a2060; border-radius: 10px; font-family: 'Boogaloo', cursive; font-size: 18px; color: var(--gold); text-align: center; transition: all .15s; }
+  .money-btn:hover { border-color: var(--gold); background: rgba(255,215,0,0.1); }
+
+  /* マシン */
+  .machine { width: 100%; max-width: 360px; background: linear-gradient(180deg, #2a1050 0%, #150830 100%); border: 2px solid #3a2060; border-radius: 16px; padding: 16px; box-shadow: 0 0 40px rgba(255,102,0,0.2); margin-bottom: 16px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+  .stat { background: var(--panel); border: 1px solid #2a1860; border-radius: 8px; padding: 8px; text-align: center; }
+  .stat-label { font-size: 9px; color: var(--muted); letter-spacing: 1px; margin-bottom: 4px; }
+  .stat-value { font-family: 'Boogaloo', cursive; font-size: 20px; color: var(--gold); }
+  .stat-value.red { color: var(--red); }
+  .stat-value.green { color: var(--green); }
+
+  .reel-area { background: #000; border: 3px solid #3a2060; border-radius: 8px; padding: 12px; margin-bottom: 16px; display: flex; justify-content: center; align-items: center; gap: 12px; min-height: 80px; }
+  .result-icon { width: 48px; height: 48px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 28px; background: #111; border: 1px solid #333; }
+  .result-icon.spin { animation: spinIcon 0.1s linear infinite; }
+  @keyframes spinIcon { 0%{opacity:1} 50%{opacity:0.3} 100%{opacity:1} }
+
+  .win-display { text-align: center; font-family: 'Boogaloo', cursive; font-size: 18px; min-height: 28px; margin-bottom: 8px; letter-spacing: 2px; }
+  .win-display.big { color: var(--gold); font-size: 24px; text-shadow: 0 0 20px rgba(255,215,0,0.8); animation: pulse .5s infinite alternate; }
+  .win-display.reg { color: var(--blue); font-size: 20px; }
+  .win-display.grape { color: var(--green); }
+  .win-display.cherry { color: var(--red); }
+  .win-display.replay { color: #aaa; }
+  .win-display.miss { color: var(--muted); font-size: 14px; }
+  @keyframes pulse { from{transform:scale(1)} to{transform:scale(1.05)} }
+
+  .medal-bar { background: var(--panel); border: 1px solid #2a1860; border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .medal-label { font-size: 11px; color: var(--muted); }
+  .medal-count { font-family: 'Boogaloo', cursive; font-size: 22px; color: var(--gold); }
+
+  .btn-area { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px; }
+  .spin-btn { all: unset; cursor: pointer; grid-column: span 2; padding: 16px; background: linear-gradient(180deg, #ff4400 0%, #cc2200 100%); border-radius: 10px; text-align: center; font-family: 'Boogaloo', cursive; font-size: 24px; letter-spacing: 3px; color: #fff; box-shadow: 0 4px 0 #881100; transition: all .1s; user-select: none; }
+  .spin-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 #881100; }
+  .spin-btn:disabled { opacity: .5; cursor: default; }
+  .add-btn { all: unset; cursor: pointer; padding: 12px; background: linear-gradient(180deg, #224488 0%, #112244 100%); border-radius: 8px; text-align: center; font-family: 'Boogaloo', cursive; font-size: 15px; color: var(--blue); box-shadow: 0 3px 0 #091122; transition: all .1s; }
+  .add-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #091122; }
+  .cash-btn { all: unset; cursor: pointer; padding: 12px; background: linear-gradient(180deg, #226622 0%, #113311 100%); border-radius: 8px; text-align: center; font-family: 'Boogaloo', cursive; font-size: 15px; color: var(--green); box-shadow: 0 3px 0 #0a1f0a; transition: all .1s; }
+  .cash-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #0a1f0a; }
+  .skip-btn { all: unset; cursor: pointer; grid-column: span 2; padding: 10px; background: rgba(255,215,0,0.08); border-radius: 6px; text-align: center; font-size: 13px; color: var(--gold); border: 1px solid rgba(255,215,0,0.3); font-family: 'Boogaloo', cursive; letter-spacing: 1px; transition: all .1s; }
+  .skip-btn:hover { background: rgba(255,215,0,0.15); }
+  .reset-btn { all: unset; cursor: pointer; grid-column: span 2; padding: 8px; background: rgba(255,34,68,0.1); border-radius: 6px; text-align: center; font-size: 12px; color: var(--red); border: 1px solid rgba(255,34,68,0.3); }
+  .reset-btn:hover { background: rgba(255,34,68,0.2); }
+
+  .cash-comment { font-size: 11px; color: var(--green); text-align: center; margin-top: 6px; letter-spacing: 1px; min-height: 18px; }
+
+  /* ログ */
+  .log-wrap { width: 100%; max-width: 360px; background: var(--panel); border: 1px solid #2a1860; border-radius: 8px; padding: 10px; max-height: 140px; overflow-y: auto; font-size: 11px; line-height: 1.8; }
+  .log-wrap::-webkit-scrollbar { width: 4px; }
+  .log-wrap::-webkit-scrollbar-thumb { background: #3a2060; border-radius: 2px; }
+  .log-miss { color: var(--muted); }
+  .log-big { color: var(--gold); font-weight: bold; }
+  .log-reg { color: var(--blue); }
+  .log-grape { color: var(--green); }
+  .log-cherry { color: var(--red); }
+  .log-replay { color: #aaa; }
+  .log-cash { color: var(--green); font-weight: bold; }
+
+  /* GOGOランプ */
+  .gogo-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 100; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
+  .gogo-overlay.show { display: flex; }
+  /* GOGO!CHANCE 演出 */
+  .gogo-lamp {
+    width: 240px; height: 240px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    animation: gogoPulse .5s ease-in-out infinite alternate;
+  }
+  .gogo-lamp::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: conic-gradient(
+      #cc00ff 0deg, #8800cc 30deg, #cc00ff 60deg, #8800cc 90deg,
+      #cc00ff 120deg, #8800cc 150deg, #cc00ff 180deg, #8800cc 210deg,
+      #cc00ff 240deg, #8800cc 270deg, #cc00ff 300deg, #8800cc 330deg, #cc00ff 360deg
+    );
+    clip-path: polygon(
+      50% 0%, 58% 18%, 79% 9%, 68% 27%, 95% 35%,
+      75% 43%, 85% 65%, 63% 57%, 59% 80%, 50% 62%,
+      41% 80%, 37% 57%, 15% 65%, 25% 43%, 5% 35%,
+      32% 27%, 21% 9%, 42% 18%
+    );
+    filter: blur(2px);
+  }
+  .gogo-lamp::after {
+    content: '';
+    position: absolute; inset: 20px;
+    background: radial-gradient(ellipse at 40% 35%, #cc88ff, #7700cc 60%, #440088);
+    clip-path: polygon(
+      50% 0%, 58% 18%, 79% 9%, 68% 27%, 95% 35%,
+      75% 43%, 85% 65%, 63% 57%, 59% 80%, 50% 62%,
+      41% 80%, 37% 57%, 15% 65%, 25% 43%, 5% 35%,
+      32% 27%, 21% 9%, 42% 18%
+    );
+  }
+  .gogo-inner {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    line-height: 1.1;
+  }
+  .gogo-inner .gogo-word {
+    font-family: 'Boogaloo', cursive;
+    font-size: 38px;
+    color: #fff;
+    text-shadow: 0 0 10px #ff00ff, 0 0 20px #cc00ff, 2px 2px 0 #440088;
+    letter-spacing: 2px;
+    display: block;
+  }
+  .gogo-inner .chance-word {
+    font-family: 'Boogaloo', cursive;
+    font-size: 22px;
+    color: #cc88ff;
+    text-shadow: 0 0 10px #9900cc;
+    letter-spacing: 3px;
+    display: block;
+  }
+  @keyframes gogoPulse {
+    from { transform: scale(1) rotate(-3deg); filter: brightness(1); }
+    to { transform: scale(1.1) rotate(3deg); filter: brightness(1.3); }
+  }
+  .gogo-text { font-family: 'Boogaloo', cursive; font-size: 48px; color: var(--gold); text-shadow: 0 0 30px rgba(255,215,0,0.8); letter-spacing: 4px; animation: gogoPulse .4s ease-in-out infinite alternate; }
+  .gogo-sub { font-family: 'Boogaloo', cursive; font-size: 20px; color: var(--text); letter-spacing: 2px; }
+  .seven-btn { all: unset; cursor: pointer; width: 240px; padding: 16px; background: linear-gradient(180deg, var(--gold) 0%, #cc8800 100%); border-radius: 12px; text-align: center; font-family: 'Boogaloo', cursive; font-size: 24px; color: #000; box-shadow: 0 5px 0 #885500; transition: all .1s; letter-spacing: 2px; animation: btnGlow 1s ease-in-out infinite alternate; }
+  @keyframes btnGlow { from{box-shadow:0 5px 0 #885500,0 0 20px rgba(255,215,0,0.3)} to{box-shadow:0 5px 0 #885500,0 0 40px rgba(255,215,0,0.7)} }
+  .seven-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #885500; }
+</style>
+</head>
+<body>
+
+<h1>JUGGLER</h1>
+<div class="subtitle">SLOT SIMULATOR</div>
+
+<!-- セットアップ画面 -->
+<div class="setup-screen" id="setupScreen">
+  <div class="setup-title">💴 所持金を選んでください</div>
+  <div class="money-grid">
+    <button class="money-btn" onclick="startGame(3000)">¥3,000</button>
+    <button class="money-btn" onclick="startGame(10000)">¥10,000</button>
+    <button class="money-btn" onclick="startGame(50000)">¥50,000</button>
+  </div>
+
+  <!-- スペック表 -->
+  <div style="margin-top:20px;text-align:left;">
+    <div style="font-family:'Boogaloo',cursive;font-size:13px;color:var(--gold);letter-spacing:2px;margin-bottom:10px;text-align:center;">📊 機種スペック</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr style="border-bottom:1px solid #3a2060;">
+          <th style="padding:6px 8px;color:var(--muted);font-weight:normal;text-align:left;letter-spacing:1px;font-size:10px;">役</th>
+          <th style="padding:6px 8px;color:var(--muted);font-weight:normal;text-align:right;letter-spacing:1px;font-size:10px;">確率</th>
+          <th style="padding:6px 8px;color:var(--muted);font-weight:normal;text-align:right;letter-spacing:1px;font-size:10px;">払い出し</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid #2a1860;">
+          <td style="padding:7px 8px;color:var(--gold);font-family:'Boogaloo',cursive;letter-spacing:1px;">🎰 BIG</td>
+          <td style="padding:7px 8px;color:var(--text);text-align:right;">1 / 255</td>
+          <td style="padding:7px 8px;color:var(--gold);text-align:right;">252枚</td>
+        </tr>
+        <tr style="border-bottom:1px solid #2a1860;">
+          <td style="padding:7px 8px;color:var(--blue);font-family:'Boogaloo',cursive;letter-spacing:1px;">🎰 REG</td>
+          <td style="padding:7px 8px;color:var(--text);text-align:right;">1 / 255</td>
+          <td style="padding:7px 8px;color:var(--blue);text-align:right;">96枚</td>
+        </tr>
+        <tr style="border-bottom:1px solid #2a1860;">
+          <td style="padding:7px 8px;color:var(--text);">合算</td>
+          <td style="padding:7px 8px;color:var(--text);text-align:right;">1 / 127.5</td>
+          <td style="padding:7px 8px;color:var(--muted);text-align:right;">-</td>
+        </tr>
+        <tr style="border-bottom:1px solid #2a1860;">
+          <td style="padding:7px 8px;color:var(--green);">🍇 ぶどう</td>
+          <td style="padding:7px 8px;color:var(--text);text-align:right;">1 / 5.78</td>
+          <td style="padding:7px 8px;color:var(--green);text-align:right;">8枚</td>
+        </tr>
+        <tr style="border-bottom:1px solid #2a1860;">
+          <td style="padding:7px 8px;color:var(--red);">🍒 チェリー</td>
+          <td style="padding:7px 8px;color:var(--text);text-align:right;">1 / 33</td>
+          <td style="padding:7px 8px;color:var(--red);text-align:right;">2枚</td>
+        </tr>
+        <tr style="border-bottom:1px solid #2a1860;">
+          <td style="padding:7px 8px;color:#aaa;">🔄 リプレイ</td>
+          <td style="padding:7px 8px;color:var(--text);text-align:right;">1 / 7.3</td>
+          <td style="padding:7px 8px;color:#aaa;text-align:right;">次回無料</td>
+        </tr>
+        <tr>
+          <td style="padding:7px 8px;color:var(--gold);">🔔 ベル/ピエロ</td>
+          <td style="padding:7px 8px;color:var(--text);text-align:right;">1 / 546</td>
+          <td style="padding:7px 8px;color:var(--gold);text-align:right;">15枚</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:8px;letter-spacing:1px;">1回転3枚使用 / 1枚20円</div>
+  </div>
+</div>
+
+<!-- マシン -->
+<div class="machine hidden" id="machineArea">
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">所持金</div>
+      <div class="stat-value green" id="wallet">¥0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">回転数</div>
+      <div class="stat-value" id="totalSpin">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">持ちメダル</div>
+      <div class="stat-value" id="medalsStat">0枚</div>
+    </div>
+  </div>
+
+  <!-- 大当たり統計 -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;">
+    <div class="stat">
+      <div class="stat-label">合算</div>
+      <div class="stat-value" id="statTotal" style="font-size:14px;color:#cc88ff;">0回</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:2px;" id="rateTotal">-</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">BIG</div>
+      <div class="stat-value" id="statBig" style="font-size:14px;color:var(--gold);">0回</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:2px;" id="rateBig">-</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">REG</div>
+      <div class="stat-value" id="statReg" style="font-size:14px;color:var(--blue);">0回</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:2px;" id="rateReg">-</div>
+    </div>
+  </div>
+
+  <div class="reel-area">
+    <div class="result-icon" id="r1">🎰</div>
+    <div class="result-icon" id="r2">🎰</div>
+    <div class="result-icon" id="r3">🎰</div>
+  </div>
+
+  <div class="win-display miss" id="winDisplay">PRESS START</div>
+
+  <div class="medal-bar">
+    <div class="medal-label">持ちメダル</div>
+    <div class="medal-count" id="medals">0枚</div>
+  </div>
+
+  <div class="btn-area">
+    <button class="spin-btn" id="spinBtn" onclick="spin()" disabled>START</button>
+    <button class="add-btn" onclick="addMedals()">+1000円投資</button>
+    <button class="cash-btn" onclick="cashOut()">精　算</button>
+    <button class="skip-btn" onclick="skipToHit()">⏩ 次の当たりまでスキップ</button>
+    <button class="reset-btn" onclick="resetGame()">最初から</button>
+  </div>
+  <div class="cash-comment" id="cashComment"></div>
+</div>
+
+<div class="log-wrap hidden" id="logWrap">
+  <div id="log"></div>
+</div>
+
+<!-- GOGOオーバーレイ -->
+<div class="gogo-overlay" id="gogoOverlay">
+  <div class="gogo-lamp">
+    <div class="gogo-inner">
+      <span class="gogo-word">GOGO!</span>
+      <span class="chance-word">CHANCE</span>
+    </div>
+  </div>
+  <div class="gogo-text">GOGO!!</div>
+  <div class="gogo-sub">CHANCE!</div>
+  <button class="seven-btn" onclick="confirmWin()">🎰 7 を 揃 え る</button>
+</div>
+
+<script>
+  const PROBS = {
+    big:    1/255,
+    reg:    1/255,
+    grape:  1/5.78,
+    cherry: 1/33,
+    replay: 1/7.3,
+    bell:   1/546,
+  };
+
+  const ICONS = {
+    big:    ['7️⃣','7️⃣','7️⃣'],
+    reg:    ['🍒','🍒','7️⃣'],
+    grape:  ['🍇','🍇','🍇'],
+    cherry: ['🍒','－','－'],
+    replay: ['🔄','🔄','🔄'],
+    bell:   ['🔔','🔔','🔔'],
+    miss:   ['－','🍇','🔄'],
+  };
+
+  const PAYOUTS = { big:252, reg:96, grape:8, cherry:2, replay:0, bell:15, miss:0 };
+  const MEDAL_PRICE = 20;
+
+  let medals=0, wallet=0, totalSpent=0, totalSpin=0, totalWinMedals=0;
+  let bigCount=0, regCount=0;
+  let sinceLastHit=0; // 前回当たりからのG数
+  let pendingWin=null, isSpinning=false, cashOutCount=0;
+
+  function startGame(amount) {
+    wallet = amount;
+    document.getElementById('setupScreen').classList.add('hidden');
+    document.getElementById('machineArea').classList.remove('hidden');
+    document.getElementById('logWrap').classList.remove('hidden');
+    updateStatus();
+  }
+
+  function spin() {
+    if(isSpinning || medals <= 0) return;
+    medals -= 3;
+    totalSpin++;
+    sinceLastHit++;
+    isSpinning = true;
+    ['r1','r2','r3'].forEach(id => document.getElementById(id).classList.add('spin'));
+    document.getElementById('winDisplay').textContent = '...';
+    document.getElementById('winDisplay').className = 'win-display miss';
+
+    setTimeout(() => {
+      ['r1','r2','r3'].forEach(id => document.getElementById(id).classList.remove('spin'));
+      const result = getResult();
+      showResult(result);
+      isSpinning = false;
+    }, 300);
+  }
+
+  function getResult() {
+    const r = Math.random();
+    let cum = 0;
+    for(const [key, prob] of Object.entries(PROBS)){
+      cum += prob;
+      if(r < cum) return key;
+    }
+    return 'miss';
+  }
+
+  function showResult(result) {
+    const icons = ICONS[result] || ICONS.miss;
+    ['r1','r2','r3'].forEach((id,i) => document.getElementById(id).textContent = icons[i]);
+
+    const wd = document.getElementById('winDisplay');
+
+    if(result === 'big' || result === 'reg'){
+      pendingWin = result;
+      wd.textContent = result === 'big' ? '🔴 GOGO!! 🔴' : '🔵 GOGO!! 🔵';
+      wd.className = 'win-display ' + result;
+      setTimeout(() => {
+        document.getElementById('gogoOverlay').classList.add('show');
+      }, 400);
+      // 当たりのログはconfirmWin時に出力
+    } else if(result === 'replay'){
+      medals += 3;
+      wd.textContent = '🔄 リプレイ';
+      wd.className = 'win-display replay';
+      addLog('🔄 リプレイ', 'log-replay');
+    } else if(result === 'grape'){
+      medals += PAYOUTS.grape; totalWinMedals += PAYOUTS.grape;
+      wd.textContent = '🍇 ぶどう +8枚';
+      wd.className = 'win-display grape';
+      addLog('🍇 ぶどう +8枚', 'log-grape');
+    } else if(result === 'cherry'){
+      medals += PAYOUTS.cherry; totalWinMedals += PAYOUTS.cherry;
+      wd.textContent = '🍒 チェリー +2枚';
+      wd.className = 'win-display cherry';
+      addLog('🍒 チェリー +2枚', 'log-cherry');
+    } else if(result === 'bell'){
+      medals += PAYOUTS.bell; totalWinMedals += PAYOUTS.bell;
+      wd.textContent = '🔔 ベル +15枚';
+      wd.className = 'win-display grape';
+      addLog('🔔 ベル +15枚', 'log-grape');
+    } else {
+      wd.textContent = 'ハズレ';
+      wd.className = 'win-display miss';
+      addLog('－ ハズレ', 'log-miss');
+    }
+
+    updateStatus();
+    if(medals < 3) document.getElementById('spinBtn').disabled = true;
+  }
+
+  function confirmWin() {
+    document.getElementById('gogoOverlay').classList.remove('show');
+    if(pendingWin){
+      const payout = PAYOUTS[pendingWin];
+      const isBig = pendingWin === 'big';
+      if(isBig) bigCount++; else regCount++;
+      medals += payout; totalWinMedals += payout;
+
+      const wd = document.getElementById('winDisplay');
+      wd.textContent = isBig ? `🎰 BIG BONUS!! +252枚` : `🎰 REG BONUS!! +96枚`;
+      wd.className = 'win-display ' + (isBig ? 'big' : 'reg');
+
+      // 当たりログ：前回からのG数で表示してリセット
+      addLog(isBig ? '🎰 BIG当たり！+252枚' : '🎰 REG当たり！+96枚', isBig ? 'log-big' : 'log-reg', true, sinceLastHit);
+      sinceLastHit = 0;
+
+      pendingWin = null;
+      updateStatus();
+      if(medals >= 3) document.getElementById('spinBtn').disabled = false;
+    }
+  }
+
+  function addMedals() {
+    if(wallet < 1000){ alert('所持金が足りません'); return; }
+    wallet -= 1000;
+    medals += 50;
+    totalSpent += 1000;
+    document.getElementById('spinBtn').disabled = false;
+    updateStatus();
+    addLog('💴 1000円投資 +50枚', 'log-replay');
+  }
+
+  function cashOut() {
+    if(medals <= 0){ alert('精算するメダルがありません'); return; }
+    const totalYen = medals * MEDAL_PRICE;
+    const roundedYen = Math.floor(totalYen / 1000) * 1000;
+    const remainder = totalYen - roundedYen;
+    cashOutCount++;
+    wallet += roundedYen;
+    medals = 0;
+
+    const commentEl = document.getElementById('cashComment');
+    if(remainder > 0){
+      commentEl.textContent = `¥${remainder}分はお菓子になりました🍬`;
+      setTimeout(() => { commentEl.textContent = ''; }, 5000);
+      addLog(`💰 第${cashOutCount}回精算 +¥${roundedYen.toLocaleString()} / ¥${remainder}分はお菓子になりました🍬`, 'log-cash');
+    } else {
+      commentEl.textContent = '';
+      addLog(`💰 第${cashOutCount}回精算 +¥${roundedYen.toLocaleString()}`, 'log-cash');
+    }
+
+    document.getElementById('spinBtn').disabled = true;
+    updateStatus();
+  }
+
+  function updateStatus() {
+    document.getElementById('medals').textContent = `${medals}枚`;
+    document.getElementById('medalsStat').textContent = `${medals}枚`;
+    document.getElementById('totalSpin').textContent = totalSpin;
+    const walletEl = document.getElementById('wallet');
+    walletEl.textContent = `¥${wallet.toLocaleString()}`;
+    walletEl.className = 'stat-value ' + (wallet >= 0 ? 'green' : 'red');
+
+    // 大当たり統計
+    const total = bigCount + regCount;
+    document.getElementById('statTotal').textContent = `${total}回`;
+    document.getElementById('statBig').textContent = `${bigCount}回`;
+    document.getElementById('statReg').textContent = `${regCount}回`;
+    document.getElementById('rateTotal').textContent = total > 0 && totalSpin > 0 ? `1/${Math.round(totalSpin/total)}` : '-';
+    document.getElementById('rateBig').textContent = bigCount > 0 && totalSpin > 0 ? `1/${Math.round(totalSpin/bigCount)}` : '-';
+    document.getElementById('rateReg').textContent = regCount > 0 && totalSpin > 0 ? `1/${Math.round(totalSpin/regCount)}` : '-';
+  }
+
+  function addLog(msg, cls, useHitG=false, hitG=null) {
+    const log = document.getElementById('log');
+    const div = document.createElement('div');
+    div.className = cls;
+    const prefix = useHitG ? `${hitG}G` : `${sinceLastHit}G`;
+    div.textContent = `${prefix}: ${msg}`;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function skipToHit() {
+    if(medals < 3){ alert('メダルが足りません'); return; }
+
+    let spin = 0;
+    let gainMedals = 0;
+    let grapeCount=0, cherryCount=0, replayCount=0, bellCount=0, missCount=0;
+    let hitResult = null;
+    let tempMedals = medals;
+
+    // 当たりが出るまでシミュレート
+    while(true){
+      if(tempMedals < 3) break; // メダル切れ
+      tempMedals -= 3;
+      spin++;
+      totalSpin++;
+
+      const r = Math.random();
+      let cum = 0;
+      let result = 'miss';
+      for(const [key, prob] of Object.entries(PROBS)){
+        cum += prob;
+        if(r < cum){ result = key; break; }
+      }
+
+      if(result === 'big' || result === 'reg'){
+        hitResult = result;
+        break;
+      } else if(result === 'replay'){
+        tempMedals += 3;
+        replayCount++;
+      } else if(result === 'grape'){
+        tempMedals += PAYOUTS.grape; gainMedals += PAYOUTS.grape; grapeCount++;
+      } else if(result === 'cherry'){
+        tempMedals += PAYOUTS.cherry; gainMedals += PAYOUTS.cherry; cherryCount++;
+      } else if(result === 'bell'){
+        tempMedals += PAYOUTS.bell; gainMedals += PAYOUTS.bell; bellCount++;
+      } else {
+        missCount++;
+      }
+    }
+
+    medals = tempMedals;
+    totalWinMedals += gainMedals;
+
+    // ログにまとめて表示
+    sinceLastHit += spin;
+    const summary = `⏩ ${spin}G消化 / 🍇${grapeCount} 🍒${cherryCount} 🔄${replayCount} 🔔${bellCount} ✕${missCount}`;
+    addLog(summary, 'log-replay');
+
+    if(hitResult){
+      pendingWin = hitResult;
+      const wd = document.getElementById('winDisplay');
+      wd.textContent = '🔴 GOGO!! 🔴';
+      wd.className = 'win-display big';
+      setTimeout(() => {
+        document.getElementById('gogoOverlay').classList.add('show');
+      }, 300);
+    } else {
+      addLog('メダルが尽きました', 'log-miss');
+    }
+
+    updateStatus();
+    if(medals < 3) document.getElementById('spinBtn').disabled = true;
+  }
+
+  function resetGame() {
+    medals=0; wallet=0; totalSpent=0; totalSpin=0; totalWinMedals=0;
+    pendingWin=null; isSpinning=false; cashOutCount=0; bigCount=0; regCount=0; sinceLastHit=0;
+    document.getElementById('log').innerHTML = '';
+    document.getElementById('cashComment').textContent = '';
+    document.getElementById('winDisplay').textContent = 'PRESS START';
+    document.getElementById('winDisplay').className = 'win-display miss';
+    ['r1','r2','r3'].forEach(id => document.getElementById(id).textContent = '🎰');
+    document.getElementById('spinBtn').disabled = true;
+    document.getElementById('machineArea').classList.add('hidden');
+    document.getElementById('logWrap').classList.add('hidden');
+    document.getElementById('setupScreen').classList.remove('hidden');
+    updateStatus();
+  }
+</script>
+</body>
+</html>
