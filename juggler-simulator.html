@@ -297,9 +297,18 @@
 </div>
 
 <script>
-  const PROBS = {
-    big:    1/255,
-    reg:    1/255,
+  // 設定1〜6ごとのBB/REG確率（マイジャグラーⅤ実機スペック準拠）
+  const SETTING_PROBS = {
+    1: { big: 1/273.1, reg: 1/409.6 },
+    2: { big: 1/270.8, reg: 1/385.5 },
+    3: { big: 1/266.4, reg: 1/336.1 },
+    4: { big: 1/254.0, reg: 1/290.0 },
+    5: { big: 1/240.1, reg: 1/268.6 },
+    6: { big: 1/229.1, reg: 1/229.1 },
+  };
+
+  // 小役確率は設定差データが未提供のため全設定共通の固定値とする
+  const COMMON_PROBS = {
     grape:  1/5.78,
     cherry: 1/33,
     replay: 1/7.3,
@@ -316,13 +325,16 @@
     miss:   ['－','🍇','🔄'],
   };
 
-  const PAYOUTS = { big:252, reg:96, grape:8, cherry:2, replay:0, bell:15, miss:0 };
+  const PAYOUTS = { big:240, reg:96, grape:8, cherry:2, replay:0, bell:15, miss:0 };
   const MEDAL_PRICE = 20;
 
   let medals=0, wallet=0, totalSpent=0, totalSpin=0, totalWinMedals=0;
   let bigCount=0, regCount=0;
   let sinceLastHit=0; // 前回当たりからのG数
   let pendingWin=null, isSpinning=false, cashOutCount=0;
+  let currentSetting=4; // セットアップ画面で選択、ゲーム中は固定
+  let netDiff=0; // 投資・精算を含まない純粋な差枚（グラフ用）
+  let fullHistory=[{ games:0, medals:0 }]; // プレイ・分析タブ通しの差枚推移
 
   function startGame(amount) {
     wallet = amount;
@@ -344,16 +356,24 @@
 
     setTimeout(() => {
       ['r1','r2','r3'].forEach(id => document.getElementById(id).classList.remove('spin'));
-      const result = getResult();
+      const result = getResult(currentSetting);
       showResult(result);
       isSpinning = false;
     }, 300);
   }
 
-  function getResult() {
+  function getResult(setting) {
+    const probs = {
+      big:    SETTING_PROBS[setting].big,
+      reg:    SETTING_PROBS[setting].reg,
+      grape:  COMMON_PROBS.grape,
+      cherry: COMMON_PROBS.cherry,
+      replay: COMMON_PROBS.replay,
+      bell:   COMMON_PROBS.bell,
+    };
     const r = Math.random();
     let cum = 0;
-    for(const [key, prob] of Object.entries(PROBS)){
+    for(const [key, prob] of Object.entries(probs)){
       cum += prob;
       if(r < cum) return key;
     }
