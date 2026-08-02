@@ -168,6 +168,7 @@
     <option value="4" selected>設定4</option>
     <option value="5">設定5</option>
     <option value="6">設定6</option>
+    <option value="random">設定不明（ランダム）</option>
   </select>
   <div class="setup-title">💴 所持金を選んでください</div>
   <div class="money-grid">
@@ -344,7 +345,8 @@
   let fullHistory=[{ games:0, medals:0 }]; // プレイ・分析タブ通しの差枚推移
 
   function startGame(amount) {
-    currentSetting = Number(document.getElementById('settingSelect').value);
+    const settingValue = document.getElementById('settingSelect').value;
+    currentSetting = settingValue === 'random' ? Math.floor(Math.random() * 6) + 1 : Number(settingValue);
     wallet = amount;
     document.getElementById('setupScreen').classList.add('hidden');
     document.getElementById('machineArea').classList.remove('hidden');
