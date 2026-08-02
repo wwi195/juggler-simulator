@@ -596,8 +596,7 @@
 
       if(result === 'big' || result === 'reg'){
         hitResult = result;
-        netDiff += 3; // 当たり時はこのスピンの賭け分を打ち消す（払い出しはconfirmWinで加算）
-        break;
+        break; // 払い出しはconfirmWinで加算。ここでは賭け分の-3のみ反映（spin()と同じ扱い）
       } else if(result === 'replay'){
         tempMedals += 3; netDiff += 3;
         replayCount++;
