@@ -406,6 +406,7 @@
   function spin() {
     if(isSpinning || medals <= 0) return;
     medals -= 3;
+    netDiff -= 3;
     totalSpin++;
     sinceLastHit++;
     isSpinning = true;
@@ -454,22 +455,22 @@
       }, 400);
       // 当たりのログはconfirmWin時に出力
     } else if(result === 'replay'){
-      medals += 3;
+      medals += 3; netDiff += 3;
       wd.textContent = '🔄 リプレイ';
       wd.className = 'win-display replay';
       addLog('🔄 リプレイ', 'log-replay');
     } else if(result === 'grape'){
-      medals += PAYOUTS.grape; totalWinMedals += PAYOUTS.grape;
+      medals += PAYOUTS.grape; netDiff += PAYOUTS.grape; totalWinMedals += PAYOUTS.grape;
       wd.textContent = '🍇 ぶどう +8枚';
       wd.className = 'win-display grape';
       addLog('🍇 ぶどう +8枚', 'log-grape');
     } else if(result === 'cherry'){
-      medals += PAYOUTS.cherry; totalWinMedals += PAYOUTS.cherry;
+      medals += PAYOUTS.cherry; netDiff += PAYOUTS.cherry; totalWinMedals += PAYOUTS.cherry;
       wd.textContent = '🍒 チェリー +2枚';
       wd.className = 'win-display cherry';
       addLog('🍒 チェリー +2枚', 'log-cherry');
     } else if(result === 'bell'){
-      medals += PAYOUTS.bell; totalWinMedals += PAYOUTS.bell;
+      medals += PAYOUTS.bell; netDiff += PAYOUTS.bell; totalWinMedals += PAYOUTS.bell;
       wd.textContent = '🔔 ベル +10枚';
       wd.className = 'win-display grape';
       addLog('🔔 ベル +10枚', 'log-grape');
@@ -479,8 +480,15 @@
       addLog('－ ハズレ', 'log-miss');
     }
 
+    // big/regは confirmWin() で払い出しが確定するまでnetDiffに加算しない
+    if(result !== 'big' && result !== 'reg') trackHistory();
+
     updateStatus();
     if(medals < 3) document.getElementById('spinBtn').disabled = true;
+  }
+
+  function trackHistory() {
+    fullHistory.push({ games: totalSpin, medals: netDiff });
   }
 
   function confirmWin() {
@@ -489,15 +497,16 @@
       const payout = PAYOUTS[pendingWin];
       const isBig = pendingWin === 'big';
       if(isBig) bigCount++; else regCount++;
-      medals += payout; totalWinMedals += payout;
+      medals += payout; netDiff += payout; totalWinMedals += payout;
 
       const wd = document.getElementById('winDisplay');
       wd.textContent = isBig ? `🎰 BIG BONUS!! +252枚` : `🎰 REG BONUS!! +96枚`;
       wd.className = 'win-display ' + (isBig ? 'big' : 'reg');
 
       // 当たりログ：前回からのG数で表示してリセット
-      addLog(isBig ? '🎰 BIG当たり！+252枚' : '🎰 REG当たり！+96枚', isBig ? 'log-big' : 'log-reg', true, sinceLastHit);
+      addLog(isBig ? `🎰 BIG当たり！+${PAYOUTS.big}枚` : '🎰 REG当たり！+96枚', isBig ? 'log-big' : 'log-reg', true, sinceLastHit);
       sinceLastHit = 0;
+      trackHistory();
 
       pendingWin = null;
       updateStatus();
@@ -582,29 +591,26 @@
       spin++;
       totalSpin++;
 
-      const r = Math.random();
-      let cum = 0;
-      let result = 'miss';
-      for(const [key, prob] of Object.entries(PROBS)){
-        cum += prob;
-        if(r < cum){ result = key; break; }
-      }
+      const result = getResult(currentSetting);
+      netDiff -= 3; // このイテレーションの賭け分（tempMedalsからはループ開始直前に3枚引かれている）
 
       if(result === 'big' || result === 'reg'){
         hitResult = result;
+        netDiff += 3; // 当たり時はこのスピンの賭け分を打ち消す（払い出しはconfirmWinで加算）
         break;
       } else if(result === 'replay'){
-        tempMedals += 3;
+        tempMedals += 3; netDiff += 3;
         replayCount++;
       } else if(result === 'grape'){
-        tempMedals += PAYOUTS.grape; gainMedals += PAYOUTS.grape; grapeCount++;
+        tempMedals += PAYOUTS.grape; netDiff += PAYOUTS.grape; gainMedals += PAYOUTS.grape; grapeCount++;
       } else if(result === 'cherry'){
-        tempMedals += PAYOUTS.cherry; gainMedals += PAYOUTS.cherry; cherryCount++;
+        tempMedals += PAYOUTS.cherry; netDiff += PAYOUTS.cherry; gainMedals += PAYOUTS.cherry; cherryCount++;
       } else if(result === 'bell'){
-        tempMedals += PAYOUTS.bell; gainMedals += PAYOUTS.bell; bellCount++;
+        tempMedals += PAYOUTS.bell; netDiff += PAYOUTS.bell; gainMedals += PAYOUTS.bell; bellCount++;
       } else {
         missCount++;
       }
+      trackHistory();
     }
 
     medals = tempMedals;
@@ -634,6 +640,7 @@
   function resetGame() {
     medals=0; wallet=0; totalSpent=0; totalSpin=0; totalWinMedals=0;
     pendingWin=null; isSpinning=false; cashOutCount=0; bigCount=0; regCount=0; sinceLastHit=0;
+    netDiff=0; fullHistory=[{ games:0, medals:0 }];
     document.getElementById('log').innerHTML = '';
     document.getElementById('cashComment').textContent = '';
     document.getElementById('winDisplay').textContent = 'PRESS START';
