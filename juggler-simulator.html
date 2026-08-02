@@ -160,6 +160,15 @@
 
 <!-- セットアップ画面 -->
 <div class="setup-screen" id="setupScreen">
+  <div class="setup-title" style="margin-bottom:8px;">🎚️ 設定を選んでください</div>
+  <select id="settingSelect" style="width:100%;padding:10px;margin-bottom:20px;background:var(--panel);color:var(--text);border:2px solid #3a2060;border-radius:8px;font-size:14px;">
+    <option value="1">設定1</option>
+    <option value="2">設定2</option>
+    <option value="3">設定3</option>
+    <option value="4" selected>設定4</option>
+    <option value="5">設定5</option>
+    <option value="6">設定6</option>
+  </select>
   <div class="setup-title">💴 所持金を選んでください</div>
   <div class="money-grid">
     <button class="money-btn" onclick="startGame(3000)">¥3,000</button>
@@ -169,31 +178,29 @@
 
   <!-- スペック表 -->
   <div style="margin-top:20px;text-align:left;">
-    <div style="font-family:'Boogaloo',cursive;font-size:13px;color:var(--gold);letter-spacing:2px;margin-bottom:10px;text-align:center;">📊 機種スペック</div>
-    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <div style="font-family:'Boogaloo',cursive;font-size:13px;color:var(--gold);letter-spacing:2px;margin-bottom:10px;text-align:center;">📊 設定別ボーナス確率</div>
+    <table style="width:100%;border-collapse:collapse;font-size:11px;">
       <thead>
         <tr style="border-bottom:1px solid #3a2060;">
-          <th style="padding:6px 8px;color:var(--muted);font-weight:normal;text-align:left;letter-spacing:1px;font-size:10px;">役</th>
-          <th style="padding:6px 8px;color:var(--muted);font-weight:normal;text-align:right;letter-spacing:1px;font-size:10px;">確率</th>
-          <th style="padding:6px 8px;color:var(--muted);font-weight:normal;text-align:right;letter-spacing:1px;font-size:10px;">払い出し</th>
+          <th style="padding:6px 4px;color:var(--muted);font-weight:normal;text-align:left;letter-spacing:1px;font-size:10px;">設定</th>
+          <th style="padding:6px 4px;color:var(--muted);font-weight:normal;text-align:right;letter-spacing:1px;font-size:10px;">BIG</th>
+          <th style="padding:6px 4px;color:var(--muted);font-weight:normal;text-align:right;letter-spacing:1px;font-size:10px;">REG</th>
+          <th style="padding:6px 4px;color:var(--muted);font-weight:normal;text-align:right;letter-spacing:1px;font-size:10px;">出玉率</th>
         </tr>
       </thead>
       <tbody>
-        <tr style="border-bottom:1px solid #2a1860;">
-          <td style="padding:7px 8px;color:var(--gold);font-family:'Boogaloo',cursive;letter-spacing:1px;">🎰 BIG</td>
-          <td style="padding:7px 8px;color:var(--text);text-align:right;">1 / 255</td>
-          <td style="padding:7px 8px;color:var(--gold);text-align:right;">252枚</td>
-        </tr>
-        <tr style="border-bottom:1px solid #2a1860;">
-          <td style="padding:7px 8px;color:var(--blue);font-family:'Boogaloo',cursive;letter-spacing:1px;">🎰 REG</td>
-          <td style="padding:7px 8px;color:var(--text);text-align:right;">1 / 255</td>
-          <td style="padding:7px 8px;color:var(--blue);text-align:right;">96枚</td>
-        </tr>
-        <tr style="border-bottom:1px solid #2a1860;">
-          <td style="padding:7px 8px;color:var(--text);">合算</td>
-          <td style="padding:7px 8px;color:var(--text);text-align:right;">1 / 127.5</td>
-          <td style="padding:7px 8px;color:var(--muted);text-align:right;">-</td>
-        </tr>
+        <tr style="border-bottom:1px solid #2a1860;"><td style="padding:6px 4px;color:var(--gold);">設定1</td><td style="padding:6px 4px;color:var(--text);text-align:right;">1/273.1</td><td style="padding:6px 4px;color:var(--text);text-align:right;">1/409.6</td><td style="padding:6px 4px;color:var(--muted);text-align:right;">97%</td></tr>
+        <tr style="border-bottom:1px solid #2a1860;"><td style="padding:6px 4px;color:var(--gold);">設定2</td><td style="padding:6px 4px;color:var(--text);text-align:right;">1/270.8</td><td style="padding:6px 4px;color:var(--text);text-align:right;">1/385.5</td><td style="padding:6px 4px;color:var(--muted);text-align:right;">98%</td></tr>
+        <tr style="border-bottom:1px solid #2a1860;"><td style="padding:6px 4px;color:var(--gold);">設定3</td><td style="padding:6px 4px;color:var(--text);text-align:right;">1/266.4</td><td style="padding:6px 4px;color:var(--text);text-align:right;">1/336.1</td><td style="padding:6px 4px;color:var(--muted);text-align:right;">99.9%</td></tr>
+        <tr style="border-bottom:1px solid #2a1860;"><td style="padding:6px 4px;color:var(--gold);">設定4</td><td style="padding:6px 4px;color:var(--text);text-align:right;">1/254.0</td><td style="padding:6px 4px;color:var(--text);text-align:right;">1/290.0</td><td style="padding:6px 4px;color:var(--muted);text-align:right;">102.8%</td></tr>
+        <tr style="border-bottom:1px solid #2a1860;"><td style="padding:6px 4px;color:var(--gold);">設定5</td><td style="padding:6px 4px;color:var(--text);text-align:right;">1/240.1</td><td style="padding:6px 4px;color:var(--text);text-align:right;">1/268.6</td><td style="padding:6px 4px;color:var(--muted);text-align:right;">105.3%</td></tr>
+        <tr><td style="padding:6px 4px;color:var(--gold);">設定6</td><td style="padding:6px 4px;color:var(--text);text-align:right;">1/229.1</td><td style="padding:6px 4px;color:var(--text);text-align:right;">1/229.1</td><td style="padding:6px 4px;color:var(--muted);text-align:right;">109.4%</td></tr>
+      </tbody>
+    </table>
+
+    <div style="font-family:'Boogaloo',cursive;font-size:13px;color:var(--gold);letter-spacing:2px;margin:16px 0 10px;text-align:center;">🍇 小役確率（全設定共通）</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <tbody>
         <tr style="border-bottom:1px solid #2a1860;">
           <td style="padding:7px 8px;color:var(--green);">🍇 ぶどう</td>
           <td style="padding:7px 8px;color:var(--text);text-align:right;">1 / 5.78</td>
@@ -216,7 +223,7 @@
         </tr>
       </tbody>
     </table>
-    <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:8px;letter-spacing:1px;">1回転3枚使用 / 1枚20円</div>
+    <div style="font-size:10px;color:var(--muted);text-align:center;margin-top:8px;letter-spacing:1px;">1回転3枚使用 / 1枚20円 / BIG平均240枚・REG平均96枚</div>
   </div>
 </div>
 
@@ -337,6 +344,7 @@
   let fullHistory=[{ games:0, medals:0 }]; // プレイ・分析タブ通しの差枚推移
 
   function startGame(amount) {
+    currentSetting = Number(document.getElementById('settingSelect').value);
     wallet = amount;
     document.getElementById('setupScreen').classList.add('hidden');
     document.getElementById('machineArea').classList.remove('hidden');
