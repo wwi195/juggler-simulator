@@ -491,6 +491,131 @@
     fullHistory.push({ games: totalSpin, medals: netDiff });
   }
 
+  function switchTab(name) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+    if(name === 'batch') drawSlumpGraph();
+  }
+
+  function runBatch() {
+    if(pendingWin || isSpinning) return; // プレイタブでボーナス確定演出中は実行しない
+    const totalGames = Math.min(1000000, Math.max(1, Number(document.getElementById('totalGamesInput').value) || 0));
+    let batchBig = 0, batchReg = 0;
+
+    while(totalSpin < totalGames){
+      medals -= 3; netDiff -= 3;
+      totalSpin++; sinceLastHit++;
+
+      const result = getResult(currentSetting);
+      if(result === 'big' || result === 'reg'){
+        const payout = PAYOUTS[result];
+        if(result === 'big'){ bigCount++; batchBig++; } else { regCount++; batchReg++; }
+        medals += payout; netDiff += payout; totalWinMedals += payout;
+        sinceLastHit = 0;
+      } else if(result === 'replay'){
+        medals += 3; netDiff += 3;
+      } else if(result === 'grape'){
+        medals += PAYOUTS.grape; netDiff += PAYOUTS.grape; totalWinMedals += PAYOUTS.grape;
+      } else if(result === 'cherry'){
+        medals += PAYOUTS.cherry; netDiff += PAYOUTS.cherry; totalWinMedals += PAYOUTS.cherry;
+      } else if(result === 'bell'){
+        medals += PAYOUTS.bell; netDiff += PAYOUTS.bell; totalWinMedals += PAYOUTS.bell;
+      }
+      trackHistory();
+    }
+
+    // 所持メダルはマイナスになりえないため、マイナス分は所持金からの補填として清算する
+    if(medals < 0){
+      wallet += medals * MEDAL_PRICE;
+      medals = 0;
+    }
+
+    const total = bigCount + regCount;
+    document.getElementById('analyzeBig').textContent = `${bigCount}回`;
+    document.getElementById('analyzeReg').textContent = `${regCount}回`;
+    document.getElementById('analyzeTotal').textContent = `${total}回`;
+    document.getElementById('analyzeRate').textContent = total > 0 ? `1/${Math.round(totalSpin/total)}` : '-';
+    document.getElementById('analyzeFinalMedals').textContent = `${netDiff >= 0 ? '+' : ''}${netDiff}枚`;
+    document.getElementById('analyzeGames').textContent = `${totalSpin}G`;
+    const totalIn = totalSpin * 3;
+    document.getElementById('analyzeKikaiwari').textContent = totalIn > 0 ? `${(((totalIn + netDiff) / totalIn) * 100).toFixed(2)}%` : '-';
+    const yen = netDiff * MEDAL_PRICE;
+    const yenEl = document.getElementById('analyzeYen');
+    yenEl.textContent = yen < 0 ? `-¥${Math.abs(yen).toLocaleString()}` : `¥${yen.toLocaleString()}`;
+    yenEl.style.color = yen < 0 ? 'var(--red)' : 'var(--green)';
+    document.getElementById('analyzeHeldMedals').textContent = `${medals}枚`;
+
+    updateStatus();
+    document.getElementById('spinBtn').disabled = medals < 3;
+    drawSlumpGraph();
+  }
+
+  function clearGraph() {
+    document.getElementById('slumpGraph').innerHTML = '';
+  }
+
+  function drawSlumpGraph() {
+    const svg = document.getElementById('slumpGraph');
+    svg.innerHTML = '';
+    if(fullHistory.length < 2) return;
+
+    const w = 600, h = 200, pad = 4, padY = 18;
+    const maxGames = fullHistory[fullHistory.length - 1].games || 1;
+    const minM = fullHistory.reduce((m, p) => Math.min(m, p.medals), 0);
+    const maxM = fullHistory.reduce((m, p) => Math.max(m, p.medals), 0);
+    const range = (maxM - minM) || 1;
+
+    const x = (g) => pad + (g / maxGames) * (w - pad * 2);
+    const y = (m) => h - padY - ((m - minM) / range) * (h - padY * 2);
+
+    const zeroLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    zeroLine.setAttribute('x1', 0);
+    zeroLine.setAttribute('x2', w);
+    zeroLine.setAttribute('y1', y(0));
+    zeroLine.setAttribute('y2', y(0));
+    zeroLine.setAttribute('stroke', '#3a2060');
+    zeroLine.setAttribute('stroke-dasharray', '4 4');
+    svg.appendChild(zeroLine);
+
+    const points = fullHistory.map(p => `${x(p.games)},${y(p.medals)}`).join(' ');
+    const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+    polyline.setAttribute('points', points);
+    polyline.setAttribute('fill', 'none');
+    polyline.setAttribute('stroke', 'var(--gold)');
+    polyline.setAttribute('stroke-width', '1.5');
+    svg.appendChild(polyline);
+
+    const peak = fullHistory.reduce((a, b) => (b.medals > a.medals ? b : a));
+    const trough = fullHistory.reduce((a, b) => (b.medals < a.medals ? b : a));
+
+    const peakText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    peakText.setAttribute('x', x(peak.games));
+    peakText.setAttribute('y', y(peak.medals) - 6);
+    peakText.setAttribute('text-anchor', 'middle');
+    peakText.setAttribute('font-size', '11');
+    peakText.setAttribute('fill', 'var(--gold)');
+    peakText.textContent = `${peak.medals >= 0 ? '+' : ''}${peak.medals}`;
+    svg.appendChild(peakText);
+
+    const troughText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    troughText.setAttribute('x', x(trough.games));
+    troughText.setAttribute('y', y(trough.medals) + 14);
+    troughText.setAttribute('text-anchor', 'middle');
+    troughText.setAttribute('font-size', '11');
+    troughText.setAttribute('fill', 'var(--red)');
+    troughText.textContent = `${trough.medals >= 0 ? '+' : ''}${trough.medals}`;
+    svg.appendChild(troughText);
+  }
+
+  function resetAnalysisStats() {
+    ['analyzeBig','analyzeReg','analyzeTotal','analyzeRate','analyzeFinalMedals','analyzeGames','analyzeKikaiwari','analyzeHeldMedals'].forEach(id => {
+      document.getElementById(id).textContent = '-';
+    });
+    const yenEl = document.getElementById('analyzeYen');
+    yenEl.textContent = '-';
+    yenEl.style.color = '';
+  }
+
   function confirmWin() {
     document.getElementById('gogoOverlay').classList.remove('show');
     if(pendingWin){
@@ -649,6 +774,9 @@
     document.getElementById('tabsBar').classList.add('hidden');
     document.getElementById('machineArea').classList.add('hidden');
     document.getElementById('logWrap').classList.add('hidden');
+    switchTab('play');
+    clearGraph();
+    resetAnalysisStats();
     document.getElementById('setupScreen').classList.remove('hidden');
     updateStatus();
   }
