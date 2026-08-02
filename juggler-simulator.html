@@ -500,7 +500,7 @@
       medals += payout; netDiff += payout; totalWinMedals += payout;
 
       const wd = document.getElementById('winDisplay');
-      wd.textContent = isBig ? `🎰 BIG BONUS!! +252枚` : `🎰 REG BONUS!! +96枚`;
+      wd.textContent = isBig ? `🎰 BIG BONUS!! +${PAYOUTS.big}枚` : `🎰 REG BONUS!! +96枚`;
       wd.className = 'win-display ' + (isBig ? 'big' : 'reg');
 
       // 当たりログ：前回からのG数で表示してリセット
