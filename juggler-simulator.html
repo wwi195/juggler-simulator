@@ -20,7 +20,7 @@
   }
   h1 { font-family: 'Boogaloo', cursive; font-size: 36px; color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.6); letter-spacing: 4px; margin-bottom: 4px; text-align: center; }
   .subtitle { font-size: 10px; color: var(--muted); letter-spacing: 3px; margin-bottom: 20px; text-align: center; }
-  .hidden { display: none; }
+  .hidden { display: none !important; }
 
   /* セットアップ */
   .setup-screen { width: 100%; max-width: 360px; background: linear-gradient(180deg, #2a1050 0%, #150830 100%); border: 2px solid #3a2060; border-radius: 16px; padding: 24px 16px; box-shadow: 0 0 40px rgba(255,102,0,0.2); text-align: center; }
@@ -70,6 +70,23 @@
   .reset-btn:hover { background: rgba(255,34,68,0.2); }
 
   .cash-comment { font-size: 11px; color: var(--green); text-align: center; margin-top: 6px; letter-spacing: 1px; min-height: 18px; }
+
+  /* タブ */
+  .tabs { display: flex; gap: 6px; width: 100%; max-width: 360px; margin-bottom: 10px; }
+  .tab-btn { all: unset; cursor: pointer; flex: 1; text-align: center; padding: 8px; background: var(--panel); color: var(--muted); border: 1px solid #3a2060; border-radius: 6px 6px 0 0; font-family: 'Boogaloo', cursive; letter-spacing: 1px; font-size: 13px; }
+  .tab-btn.active { background: var(--gold); color: #000; border-color: var(--gold); }
+  .tab-panel { display: none; width: 100%; max-width: 360px; }
+  .tab-panel.active { display: flex; flex-direction: column; align-items: center; }
+
+  /* 分析タブ */
+  .analysis-panel { width: 100%; background: linear-gradient(180deg, #2a1050 0%, #150830 100%); border: 2px solid #3a2060; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+  .analysis-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .analysis-row label { font-size: 12px; color: var(--muted); }
+  .analysis-row input[type="number"] { flex: 1; background: var(--panel); color: var(--text); border: 1px solid #3a2060; border-radius: 6px; padding: 8px; font-size: 13px; }
+  .run-btn { all: unset; cursor: pointer; padding: 10px 16px; background: linear-gradient(180deg, #224488 0%, #112244 100%); border-radius: 8px; text-align: center; font-family: 'Boogaloo', cursive; font-size: 14px; color: var(--blue); box-shadow: 0 3px 0 #091122; }
+  .analysis-note { font-size: 10px; color: var(--muted); margin-bottom: 12px; letter-spacing: 1px; }
+  .analysis-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+  svg#slumpGraph { width: 100%; height: 180px; background: var(--panel); border: 1px solid #2a1860; border-radius: 8px; }
 
   /* ログ */
   .log-wrap { width: 100%; max-width: 360px; background: var(--panel); border: 1px solid #2a1860; border-radius: 8px; padding: 10px; max-height: 140px; overflow-y: auto; font-size: 11px; line-height: 1.8; }
@@ -228,6 +245,13 @@
   </div>
 </div>
 
+<!-- タブ -->
+<div class="tabs hidden" id="tabsBar">
+  <button class="tab-btn active" data-tab="play" onclick="switchTab('play')">プレイ</button>
+  <button class="tab-btn" data-tab="batch" onclick="switchTab('batch')">分析（一括実行）</button>
+</div>
+
+<div class="tab-panel active" id="tab-play">
 <!-- マシン -->
 <div class="machine hidden" id="machineArea">
   <div class="stats">
@@ -290,6 +314,30 @@
 <div class="log-wrap hidden" id="logWrap">
   <div id="log"></div>
 </div>
+</div>
+
+<div class="tab-panel" id="tab-batch">
+  <div class="analysis-panel">
+    <div class="analysis-row">
+      <label for="totalGamesInput">総ゲーム数</label>
+      <input type="number" id="totalGamesInput" value="6000" min="1" max="1000000" step="100">
+      <button class="run-btn" onclick="runBatch()">実行</button>
+    </div>
+    <div class="analysis-note">※ 上限100万G（ブラウザが固まるため）</div>
+    <div class="analysis-stats">
+      <div class="stat"><div class="stat-label">BIG回数</div><div class="stat-value" id="analyzeBig">-</div></div>
+      <div class="stat"><div class="stat-label">REG回数</div><div class="stat-value" id="analyzeReg">-</div></div>
+      <div class="stat"><div class="stat-label">合算回数</div><div class="stat-value" id="analyzeTotal">-</div></div>
+      <div class="stat"><div class="stat-label">合算確率</div><div class="stat-value" id="analyzeRate" style="font-size:14px;">-</div></div>
+      <div class="stat"><div class="stat-label">最終差枚</div><div class="stat-value" id="analyzeFinalMedals">-</div></div>
+      <div class="stat"><div class="stat-label">消化G数</div><div class="stat-value" id="analyzeGames" style="font-size:14px;">-</div></div>
+      <div class="stat"><div class="stat-label">機械割</div><div class="stat-value" id="analyzeKikaiwari" style="font-size:14px;">-</div></div>
+      <div class="stat"><div class="stat-label">収支（円換算）</div><div class="stat-value" id="analyzeYen" style="font-size:14px;">-</div></div>
+      <div class="stat" style="grid-column:span 2;"><div class="stat-label">所持メダル</div><div class="stat-value" id="analyzeHeldMedals">-</div></div>
+    </div>
+    <svg id="slumpGraph" viewBox="0 0 600 200" preserveAspectRatio="none"></svg>
+  </div>
+</div>
 
 <!-- GOGOオーバーレイ -->
 <div class="gogo-overlay" id="gogoOverlay">
@@ -349,6 +397,7 @@
     currentSetting = settingValue === 'random' ? Math.floor(Math.random() * 6) + 1 : Number(settingValue);
     wallet = amount;
     document.getElementById('setupScreen').classList.add('hidden');
+    document.getElementById('tabsBar').classList.remove('hidden');
     document.getElementById('machineArea').classList.remove('hidden');
     document.getElementById('logWrap').classList.remove('hidden');
     updateStatus();
@@ -591,6 +640,7 @@
     document.getElementById('winDisplay').className = 'win-display miss';
     ['r1','r2','r3'].forEach(id => document.getElementById(id).textContent = '🎰');
     document.getElementById('spinBtn').disabled = true;
+    document.getElementById('tabsBar').classList.add('hidden');
     document.getElementById('machineArea').classList.add('hidden');
     document.getElementById('logWrap').classList.add('hidden');
     document.getElementById('setupScreen').classList.remove('hidden');
