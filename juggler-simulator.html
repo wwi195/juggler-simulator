@@ -318,12 +318,16 @@
 
 <div class="tab-panel" id="tab-batch">
   <div class="analysis-panel">
+    <div class="analysis-row" style="justify-content:space-between;">
+      <span id="analyzeSettingLabel" style="font-family:'Boogaloo',cursive;font-size:14px;color:var(--gold);letter-spacing:1px;">設定: -</span>
+      <button class="run-btn" id="revealSettingBtn" style="display:none;font-size:12px;padding:6px 12px;" onclick="revealSetting()">答え合わせ</button>
+    </div>
     <div class="analysis-row">
       <label for="totalGamesInput">総ゲーム数</label>
-      <input type="number" id="totalGamesInput" value="6000" min="1" max="1000000" step="100">
+      <input type="number" id="totalGamesInput" value="6000" min="1" max="100000" step="100">
       <button class="run-btn" onclick="runBatch()">実行</button>
     </div>
-    <div class="analysis-note">※ 上限100万G（ブラウザが固まるため）</div>
+    <div class="analysis-note">※ 上限10万G（ブラウザが固まるため）</div>
     <div class="analysis-stats">
       <div class="stat"><div class="stat-label">BIG回数</div><div class="stat-value" id="analyzeBig">-</div></div>
       <div class="stat"><div class="stat-label">REG回数</div><div class="stat-value" id="analyzeReg">-</div></div>
@@ -389,12 +393,15 @@
   let sinceLastHit=0; // 前回当たりからのG数
   let pendingWin=null, isSpinning=false, cashOutCount=0;
   let currentSetting=4; // セットアップ画面で選択、ゲーム中は固定
+  let isSettingHidden=false; // 「設定不明」でプレイ開始した場合true。答え合わせボタンでfalseに戻る
   let netDiff=0; // 投資・精算を含まない純粋な差枚（グラフ用）
   let fullHistory=[{ games:0, medals:0 }]; // プレイ・分析タブ通しの差枚推移
 
   function startGame(amount) {
     const settingValue = document.getElementById('settingSelect').value;
     currentSetting = settingValue === 'random' ? Math.floor(Math.random() * 6) + 1 : Number(settingValue);
+    isSettingHidden = settingValue === 'random';
+    updateSettingDisplay();
     wallet = amount;
     document.getElementById('setupScreen').classList.add('hidden');
     document.getElementById('tabsBar').classList.remove('hidden');
@@ -491,6 +498,23 @@
     fullHistory.push({ games: totalSpin, medals: netDiff });
   }
 
+  function updateSettingDisplay() {
+    const label = document.getElementById('analyzeSettingLabel');
+    const btn = document.getElementById('revealSettingBtn');
+    if(isSettingHidden){
+      label.textContent = '設定: 不明';
+      btn.style.display = '';
+    } else {
+      label.textContent = `設定: ${currentSetting}`;
+      btn.style.display = 'none';
+    }
+  }
+
+  function revealSetting() {
+    isSettingHidden = false;
+    updateSettingDisplay();
+  }
+
   function switchTab(name) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
@@ -499,8 +523,7 @@
 
   function runBatch() {
     if(pendingWin || isSpinning) return; // プレイタブでボーナス確定演出中は実行しない
-    const totalGames = Math.min(1000000, Math.max(1, Number(document.getElementById('totalGamesInput').value) || 0));
-    let batchBig = 0, batchReg = 0;
+    const totalGames = Math.min(100000, Math.max(1, Number(document.getElementById('totalGamesInput').value) || 0));
 
     while(totalSpin < totalGames){
       medals -= 3; netDiff -= 3;
@@ -509,7 +532,7 @@
       const result = getResult(currentSetting);
       if(result === 'big' || result === 'reg'){
         const payout = PAYOUTS[result];
-        if(result === 'big'){ bigCount++; batchBig++; } else { regCount++; batchReg++; }
+        if(result === 'big'){ bigCount++; } else { regCount++; }
         medals += payout; netDiff += payout; totalWinMedals += payout;
         sinceLastHit = 0;
       } else if(result === 'replay'){
@@ -568,6 +591,12 @@
     const x = (g) => pad + (g / maxGames) * (w - pad * 2);
     const y = (m) => h - padY - ((m - minM) / range) * (h - padY * 2);
 
+    // 600px幅のSVGに対して大量の点は不要かつ描画が重くなるため間引く。
+    // peak/trough(上のminM/maxM算出)は間引き前のfullHistory全体から求めているので精度は変わらない。
+    const MAX_POLYLINE_POINTS = 1000;
+    const stride = Math.ceil(fullHistory.length / MAX_POLYLINE_POINTS);
+    const sampled = stride <= 1 ? fullHistory : fullHistory.filter((_, i) => i % stride === 0 || i === fullHistory.length - 1);
+
     const zeroLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
     zeroLine.setAttribute('x1', 0);
     zeroLine.setAttribute('x2', w);
@@ -577,7 +606,7 @@
     zeroLine.setAttribute('stroke-dasharray', '4 4');
     svg.appendChild(zeroLine);
 
-    const points = fullHistory.map(p => `${x(p.games)},${y(p.medals)}`).join(' ');
+    const points = sampled.map(p => `${x(p.games)},${y(p.medals)}`).join(' ');
     const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
     polyline.setAttribute('points', points);
     polyline.setAttribute('fill', 'none');
@@ -614,6 +643,8 @@
     const yenEl = document.getElementById('analyzeYen');
     yenEl.textContent = '-';
     yenEl.style.color = '';
+    document.getElementById('analyzeSettingLabel').textContent = '設定: -';
+    document.getElementById('revealSettingBtn').style.display = 'none';
   }
 
   function confirmWin() {
@@ -764,6 +795,7 @@
   function resetGame() {
     medals=0; wallet=0; totalSpent=0; totalSpin=0; totalWinMedals=0;
     pendingWin=null; isSpinning=false; cashOutCount=0; bigCount=0; regCount=0; sinceLastHit=0;
+    isSettingHidden=false;
     netDiff=0; fullHistory=[{ games:0, medals:0 }];
     document.getElementById('log').innerHTML = '';
     document.getElementById('cashComment').textContent = '';
