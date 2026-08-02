@@ -220,7 +220,7 @@
         <tr>
           <td style="padding:7px 8px;color:var(--gold);">🔔 ベル/ピエロ</td>
           <td style="padding:7px 8px;color:var(--text);text-align:right;">1 / 546</td>
-          <td style="padding:7px 8px;color:var(--gold);text-align:right;">15枚</td>
+          <td style="padding:7px 8px;color:var(--gold);text-align:right;">10枚</td>
         </tr>
       </tbody>
     </table>
@@ -333,7 +333,7 @@
     miss:   ['－','🍇','🔄'],
   };
 
-  const PAYOUTS = { big:240, reg:96, grape:8, cherry:2, replay:0, bell:15, miss:0 };
+  const PAYOUTS = { big:240, reg:96, grape:8, cherry:2, replay:0, bell:10, miss:0 };
   const MEDAL_PRICE = 20;
 
   let medals=0, wallet=0, totalSpent=0, totalSpin=0, totalWinMedals=0;
@@ -421,9 +421,9 @@
       addLog('🍒 チェリー +2枚', 'log-cherry');
     } else if(result === 'bell'){
       medals += PAYOUTS.bell; totalWinMedals += PAYOUTS.bell;
-      wd.textContent = '🔔 ベル +15枚';
+      wd.textContent = '🔔 ベル +10枚';
       wd.className = 'win-display grape';
-      addLog('🔔 ベル +15枚', 'log-grape');
+      addLog('🔔 ベル +10枚', 'log-grape');
     } else {
       wd.textContent = 'ハズレ';
       wd.className = 'win-display miss';
