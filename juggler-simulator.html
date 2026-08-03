@@ -710,12 +710,14 @@
   }
 
   function skipToHit() {
+    if(pendingWin){ alert('ボーナス確定演出中です。STARTを押して揃えてください'); return; }
     if(medals < 3){ alert('メダルが足りません'); return; }
 
     let spin = 0;
     let gainMedals = 0;
     let grapeCount=0, cherryCount=0, replayCount=0, bellCount=0, missCount=0;
     let hitResult = null;
+    let hitCherryOverlap = false;
     let tempMedals = medals;
 
     // 当たりが出るまでシミュレート
@@ -724,13 +726,21 @@
       tempMedals -= 3;
       spin++;
       totalSpin++;
+      totalBetIn += 3;
 
       const result = getResult(currentSetting);
       netDiff -= 3; // このイテレーションの賭け分（tempMedalsからはループ開始直前に3枚引かれている）
 
       if(result === 'big' || result === 'reg'){
         hitResult = result;
-        break; // 払い出しはconfirmWinで加算。ここでは賭け分の-3のみ反映（spin()と同じ扱い）
+        hitCherryOverlap = Math.random() < CHERRY_OVERLAP_RATE;
+        if(hitCherryOverlap){
+          tempMedals += PAYOUTS.cherry; netDiff += PAYOUTS.cherry; gainMedals += PAYOUTS.cherry; cherryCount++;
+        } else {
+          missCount++;
+        }
+        trackHistory();
+        break; // 揃えるスピンは、この後プレイヤーがSTARTを押した時にspin()側で処理する
       } else if(result === 'replay'){
         tempMedals += 3; netDiff += 3;
         replayCount++;
@@ -756,18 +766,27 @@
 
     if(hitResult){
       pendingWin = hitResult;
+      const isPreAnnounce = Math.random() < PRE_ANNOUNCE_RATE;
+      lampLit = isPreAnnounce;
+      updateGogoLamp();
+
+      const icons = hitCherryOverlap ? ICONS.cherry : ICONS.miss;
+      ['r1','r2','r3'].forEach((id,i) => document.getElementById(id).textContent = icons[i]);
+
       const wd = document.getElementById('winDisplay');
-      wd.textContent = '🔴 GOGO!! 🔴';
-      wd.className = 'win-display big';
-      setTimeout(() => {
-        document.getElementById('gogoOverlay').classList.add('show');
-      }, 300);
+      if(hitCherryOverlap){
+        wd.textContent = '🍒 チェリー +2枚';
+        wd.className = 'win-display cherry';
+      } else {
+        wd.textContent = 'ハズレ';
+        wd.className = 'win-display miss';
+      }
     } else {
       addLog('メダルが尽きました', 'log-miss');
     }
 
     updateStatus();
-    if(medals < 3) document.getElementById('spinBtn').disabled = true;
+    updateSpinButtonState();
   }
 
   function resetGame() {
