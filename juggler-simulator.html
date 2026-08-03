@@ -499,25 +499,39 @@
     const totalGames = Math.min(100000, Math.max(1, Number(document.getElementById('totalGamesInput').value) || 0));
 
     while(totalSpin < totalGames){
-      medals -= 3; netDiff -= 3;
+      medals -= 3; netDiff -= 3; totalBetIn += 3;
       totalSpin++; sinceLastHit++;
 
       const result = getResult(currentSetting);
       if(result === 'big' || result === 'reg'){
+        // フラグ成立スピン：チェリー重複のみ反映（告知タイミングはランプ演出用でプレイタブ限定のため省略）
+        if(Math.random() < CHERRY_OVERLAP_RATE){
+          medals += PAYOUTS.cherry; netDiff += PAYOUTS.cherry; totalWinMedals += PAYOUTS.cherry;
+        }
+        trackHistory();
+
+        // 揃えるスピン：1枚消費して払い出し確定（確率モデル上は同一ゲームの続きのためtotalSpinは増やさない）
+        medals -= 1; netDiff -= 1; totalBetIn += 1;
         const payout = PAYOUTS[result];
         if(result === 'big'){ bigCount++; } else { regCount++; }
         medals += payout; netDiff += payout; totalWinMedals += payout;
         sinceLastHit = 0;
+        trackHistory();
       } else if(result === 'replay'){
         medals += 3; netDiff += 3;
+        trackHistory();
       } else if(result === 'grape'){
         medals += PAYOUTS.grape; netDiff += PAYOUTS.grape; totalWinMedals += PAYOUTS.grape;
+        trackHistory();
       } else if(result === 'cherry'){
         medals += PAYOUTS.cherry; netDiff += PAYOUTS.cherry; totalWinMedals += PAYOUTS.cherry;
+        trackHistory();
       } else if(result === 'bell'){
         medals += PAYOUTS.bell; netDiff += PAYOUTS.bell; totalWinMedals += PAYOUTS.bell;
+        trackHistory();
+      } else {
+        trackHistory();
       }
-      trackHistory();
     }
 
     // 所持メダルはマイナスになりえないため、マイナス分は所持金からの補填として清算する
@@ -533,8 +547,7 @@
     document.getElementById('analyzeRate').textContent = total > 0 ? `1/${Math.round(totalSpin/total)}` : '-';
     document.getElementById('analyzeFinalMedals').textContent = `${netDiff >= 0 ? '+' : ''}${netDiff}枚`;
     document.getElementById('analyzeGames').textContent = `${totalSpin}G`;
-    const totalIn = totalSpin * 3;
-    document.getElementById('analyzeKikaiwari').textContent = totalIn > 0 ? `${(((totalIn + netDiff) / totalIn) * 100).toFixed(2)}%` : '-';
+    document.getElementById('analyzeKikaiwari').textContent = totalBetIn > 0 ? `${(((totalBetIn + netDiff) / totalBetIn) * 100).toFixed(2)}%` : '-';
     const yen = netDiff * MEDAL_PRICE;
     const yenEl = document.getElementById('analyzeYen');
     yenEl.textContent = yen < 0 ? `-¥${Math.abs(yen).toLocaleString()}` : `¥${yen.toLocaleString()}`;
@@ -542,7 +555,7 @@
     document.getElementById('analyzeHeldMedals').textContent = `${medals}枚`;
 
     updateStatus();
-    document.getElementById('spinBtn').disabled = medals < 3;
+    updateSpinButtonState();
     drawSlumpGraph();
   }
 
