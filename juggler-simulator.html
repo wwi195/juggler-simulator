@@ -285,8 +285,15 @@
 
   const PAYOUTS = { big:240, reg:96, grape:8, cherry:2, replay:0, bell:10, miss:0 };
   const MEDAL_PRICE = 20;
-  // ボーナスフラグ成立スピンで、ハズレの代わりにチェリーが成立する頻度（暫定値。実データ入手後に差し替え）
-  const CHERRY_OVERLAP_RATE = 0.5;
+  // ボーナスフラグ成立スピンで、ハズレの代わりにチェリーが成立する頻度（設定・BIG/REG別、実戦値から算出）
+  const CHERRY_OVERLAP_RATE = {
+    1: { big: 0.1973, reg: 0.3553 },
+    2: { big: 0.2026, reg: 0.3111 },
+    3: { big: 0.2042, reg: 0.3124 },
+    4: { big: 0.2097, reg: 0.2857 },
+    5: { big: 0.2077, reg: 0.2881 },
+    6: { big: 0.2058, reg: 0.2794 },
+  };
   // 先告知（フラグ成立スピンでGOGOランプが点灯）になる確率。残りは後告知（揃えるスピンで初めて点灯）
   const PRE_ANNOUNCE_RATE = 0.25;
 
@@ -332,7 +339,7 @@
       result = getResult(currentSetting);
       if(result === 'big' || result === 'reg'){
         isPreAnnounce = Math.random() < PRE_ANNOUNCE_RATE;
-        isCherryOverlap = Math.random() < CHERRY_OVERLAP_RATE;
+        isCherryOverlap = Math.random() < CHERRY_OVERLAP_RATE[currentSetting][result];
         lampLit = isPreAnnounce;
       } else {
         lampLit = false;
@@ -487,7 +494,7 @@
       const result = getResult(currentSetting);
       if(result === 'big' || result === 'reg'){
         // フラグ成立スピン：チェリー重複のみ反映（告知タイミングはランプ演出用でプレイタブ限定のため省略）
-        if(Math.random() < CHERRY_OVERLAP_RATE){
+        if(Math.random() < CHERRY_OVERLAP_RATE[currentSetting][result]){
           medals += PAYOUTS.cherry; netDiff += PAYOUTS.cherry; totalWinMedals += PAYOUTS.cherry;
         }
         trackHistory();
@@ -727,7 +734,7 @@
 
       if(result === 'big' || result === 'reg'){
         hitResult = result;
-        hitCherryOverlap = Math.random() < CHERRY_OVERLAP_RATE;
+        hitCherryOverlap = Math.random() < CHERRY_OVERLAP_RATE[currentSetting][result];
         if(hitCherryOverlap){
           tempMedals += PAYOUTS.cherry; netDiff += PAYOUTS.cherry; gainMedals += PAYOUTS.cherry; cherryCount++;
         } else {
