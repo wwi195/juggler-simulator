@@ -100,74 +100,13 @@
   .log-replay { color: #aaa; }
   .log-cash { color: var(--green); font-weight: bold; }
 
-  /* GOGOランプ */
-  .gogo-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 100; flex-direction: column; align-items: center; justify-content: center; gap: 20px; }
-  .gogo-overlay.show { display: flex; }
-  /* GOGO!CHANCE 演出 */
-  .gogo-lamp {
-    width: 240px; height: 240px;
-    position: relative;
-    display: flex; align-items: center; justify-content: center;
-    animation: gogoPulse .5s ease-in-out infinite alternate;
-  }
-  .gogo-lamp::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: conic-gradient(
-      #cc00ff 0deg, #8800cc 30deg, #cc00ff 60deg, #8800cc 90deg,
-      #cc00ff 120deg, #8800cc 150deg, #cc00ff 180deg, #8800cc 210deg,
-      #cc00ff 240deg, #8800cc 270deg, #cc00ff 300deg, #8800cc 330deg, #cc00ff 360deg
-    );
-    clip-path: polygon(
-      50% 0%, 58% 18%, 79% 9%, 68% 27%, 95% 35%,
-      75% 43%, 85% 65%, 63% 57%, 59% 80%, 50% 62%,
-      41% 80%, 37% 57%, 15% 65%, 25% 43%, 5% 35%,
-      32% 27%, 21% 9%, 42% 18%
-    );
-    filter: blur(2px);
-  }
-  .gogo-lamp::after {
-    content: '';
-    position: absolute; inset: 20px;
-    background: radial-gradient(ellipse at 40% 35%, #cc88ff, #7700cc 60%, #440088);
-    clip-path: polygon(
-      50% 0%, 58% 18%, 79% 9%, 68% 27%, 95% 35%,
-      75% 43%, 85% 65%, 63% 57%, 59% 80%, 50% 62%,
-      41% 80%, 37% 57%, 15% 65%, 25% 43%, 5% 35%,
-      32% 27%, 21% 9%, 42% 18%
-    );
-  }
-  .gogo-inner {
-    position: relative;
-    z-index: 2;
-    text-align: center;
-    line-height: 1.1;
-  }
-  .gogo-inner .gogo-word {
-    font-family: 'Boogaloo', cursive;
-    font-size: 38px;
-    color: #fff;
-    text-shadow: 0 0 10px #ff00ff, 0 0 20px #cc00ff, 2px 2px 0 #440088;
-    letter-spacing: 2px;
-    display: block;
-  }
-  .gogo-inner .chance-word {
-    font-family: 'Boogaloo', cursive;
-    font-size: 22px;
-    color: #cc88ff;
-    text-shadow: 0 0 10px #9900cc;
-    letter-spacing: 3px;
-    display: block;
-  }
+  /* GOGOランプ（リール上部・常設） */
+  .gogo-lamp-mini { width: 100%; max-width: 360px; text-align: center; padding: 8px; margin-bottom: 12px; border-radius: 8px; background: #050208; border: 2px solid #2a1860; font-family: 'Boogaloo', cursive; font-size: 15px; letter-spacing: 4px; color: #3a2a55; transition: color .2s, background .2s, border-color .2s; }
+  .gogo-lamp-mini.lit { color: #fff; background: radial-gradient(ellipse at center, #cc00ff 0%, #440088 100%); border-color: #cc00ff; box-shadow: 0 0 20px rgba(204,0,255,0.8); animation: gogoPulse .5s ease-in-out infinite alternate; }
   @keyframes gogoPulse {
-    from { transform: scale(1) rotate(-3deg); filter: brightness(1); }
-    to { transform: scale(1.1) rotate(3deg); filter: brightness(1.3); }
+    from { transform: scale(1); filter: brightness(1); }
+    to { transform: scale(1.03); filter: brightness(1.3); }
   }
-  .gogo-text { font-family: 'Boogaloo', cursive; font-size: 48px; color: var(--gold); text-shadow: 0 0 30px rgba(255,215,0,0.8); letter-spacing: 4px; animation: gogoPulse .4s ease-in-out infinite alternate; }
-  .gogo-sub { font-family: 'Boogaloo', cursive; font-size: 20px; color: var(--text); letter-spacing: 2px; }
-  .seven-btn { all: unset; cursor: pointer; width: 240px; padding: 16px; background: linear-gradient(180deg, var(--gold) 0%, #cc8800 100%); border-radius: 12px; text-align: center; font-family: 'Boogaloo', cursive; font-size: 24px; color: #000; box-shadow: 0 5px 0 #885500; transition: all .1s; letter-spacing: 2px; animation: btnGlow 1s ease-in-out infinite alternate; }
-  @keyframes btnGlow { from{box-shadow:0 5px 0 #885500,0 0 20px rgba(255,215,0,0.3)} to{box-shadow:0 5px 0 #885500,0 0 40px rgba(255,215,0,0.7)} }
-  .seven-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #885500; }
 </style>
 </head>
 <body>
@@ -288,6 +227,8 @@
     </div>
   </div>
 
+  <div class="gogo-lamp-mini" id="gogoLampMini">GOGO</div>
+
   <div class="reel-area">
     <div class="result-icon" id="r1">🎰</div>
     <div class="result-icon" id="r2">🎰</div>
@@ -343,19 +284,6 @@
   </div>
 </div>
 
-<!-- GOGOオーバーレイ -->
-<div class="gogo-overlay" id="gogoOverlay">
-  <div class="gogo-lamp">
-    <div class="gogo-inner">
-      <span class="gogo-word">GOGO!</span>
-      <span class="chance-word">CHANCE</span>
-    </div>
-  </div>
-  <div class="gogo-text">GOGO!!</div>
-  <div class="gogo-sub">CHANCE!</div>
-  <button class="seven-btn" onclick="confirmWin()">🎰 7 を 揃 え る</button>
-</div>
-
 <script>
   // 設定1〜6ごとのBB/REG確率（マイジャグラーⅤ実機スペック準拠）
   const SETTING_PROBS = {
@@ -377,7 +305,7 @@
 
   const ICONS = {
     big:    ['7️⃣','7️⃣','7️⃣'],
-    reg:    ['🍒','🍒','7️⃣'],
+    reg:    ['7️⃣','7️⃣','BAR'],
     grape:  ['🍇','🍇','🍇'],
     cherry: ['🍒','－','－'],
     replay: ['🔄','🔄','🔄'],
@@ -387,6 +315,10 @@
 
   const PAYOUTS = { big:240, reg:96, grape:8, cherry:2, replay:0, bell:10, miss:0 };
   const MEDAL_PRICE = 20;
+  // ボーナスフラグ成立スピンで、ハズレの代わりにチェリーが成立する頻度（暫定値。実データ入手後に差し替え）
+  const CHERRY_OVERLAP_RATE = 0.5;
+  // 先告知（フラグ成立スピンでGOGOランプが点灯）になる確率。残りは後告知（揃えるスピンで初めて点灯）
+  const PRE_ANNOUNCE_RATE = 0.25;
 
   let medals=0, wallet=0, totalSpent=0, totalSpin=0, totalWinMedals=0;
   let bigCount=0, regCount=0;
@@ -396,6 +328,8 @@
   let isSettingHidden=false; // 「設定不明」でプレイ開始した場合true。答え合わせボタンでfalseに戻る
   let netDiff=0; // 投資・精算を含まない純粋な差枚（グラフ用）
   let fullHistory=[{ games:0, medals:0 }]; // プレイ・分析タブ通しの差枚推移
+  let lampLit=false; // GOGOランプ（リール上部の常設マーク）の点灯状態
+  let totalBetIn=0; // 機械割計算用：実際に投入した合計メダル枚数（3枚/1枚スピンの合計）
 
   function startGame(amount) {
     const settingValue = document.getElementById('settingSelect').value;
@@ -411,11 +345,19 @@
   }
 
   function spin() {
-    if(isSpinning || medals <= 0) return;
-    medals -= 3;
-    netDiff -= 3;
-    totalSpin++;
-    sinceLastHit++;
+    if(isSpinning) return;
+    const isResolving = !!pendingWin;
+    const cost = isResolving ? 1 : 3;
+    if(medals < cost) return;
+    medals -= cost;
+    netDiff -= cost;
+    totalBetIn += cost;
+    if(!isResolving){
+      totalSpin++;
+      sinceLastHit++;
+      lampLit = false;
+      updateGogoLamp();
+    }
     isSpinning = true;
     ['r1','r2','r3'].forEach(id => document.getElementById(id).classList.add('spin'));
     document.getElementById('winDisplay').textContent = '...';
@@ -423,10 +365,23 @@
 
     setTimeout(() => {
       ['r1','r2','r3'].forEach(id => document.getElementById(id).classList.remove('spin'));
-      const result = getResult(currentSetting);
-      showResult(result);
+      if(isResolving){
+        resolveBonus();
+      } else {
+        const result = getResult(currentSetting);
+        showResult(result);
+      }
       isSpinning = false;
     }, 300);
+  }
+
+  function updateGogoLamp() {
+    document.getElementById('gogoLampMini').classList.toggle('lit', lampLit);
+  }
+
+  function updateSpinButtonState() {
+    const cost = pendingWin ? 1 : 3;
+    document.getElementById('spinBtn').disabled = medals < cost;
   }
 
   function getResult(setting) {
@@ -448,20 +403,40 @@
   }
 
   function showResult(result) {
-    const icons = ICONS[result] || ICONS.miss;
-    ['r1','r2','r3'].forEach((id,i) => document.getElementById(id).textContent = icons[i]);
-
     const wd = document.getElementById('winDisplay');
 
     if(result === 'big' || result === 'reg'){
       pendingWin = result;
-      wd.textContent = result === 'big' ? '🔴 GOGO!! 🔴' : '🔵 GOGO!! 🔵';
-      wd.className = 'win-display ' + result;
-      setTimeout(() => {
-        document.getElementById('gogoOverlay').classList.add('show');
-      }, 400);
-      // 当たりのログはconfirmWin時に出力
-    } else if(result === 'replay'){
+      const isPreAnnounce = Math.random() < PRE_ANNOUNCE_RATE;
+      const isCherryOverlap = Math.random() < CHERRY_OVERLAP_RATE;
+      lampLit = isPreAnnounce;
+      updateGogoLamp();
+
+      if(isCherryOverlap){
+        const icons = ICONS.cherry;
+        ['r1','r2','r3'].forEach((id,i) => document.getElementById(id).textContent = icons[i]);
+        medals += PAYOUTS.cherry; netDiff += PAYOUTS.cherry; totalWinMedals += PAYOUTS.cherry;
+        wd.textContent = '🍒 チェリー +2枚';
+        wd.className = 'win-display cherry';
+        addLog('🍒 チェリー +2枚', 'log-cherry');
+      } else {
+        const icons = ICONS.miss;
+        ['r1','r2','r3'].forEach((id,i) => document.getElementById(id).textContent = icons[i]);
+        wd.textContent = 'ハズレ';
+        wd.className = 'win-display miss';
+        addLog('－ ハズレ', 'log-miss');
+      }
+
+      trackHistory();
+      updateStatus();
+      updateSpinButtonState();
+      return;
+    }
+
+    const icons = ICONS[result] || ICONS.miss;
+    ['r1','r2','r3'].forEach((id,i) => document.getElementById(id).textContent = icons[i]);
+
+    if(result === 'replay'){
       medals += 3; netDiff += 3;
       wd.textContent = '🔄 リプレイ';
       wd.className = 'win-display replay';
@@ -487,11 +462,9 @@
       addLog('－ ハズレ', 'log-miss');
     }
 
-    // big/regは confirmWin() で払い出しが確定するまでnetDiffに加算しない
-    if(result !== 'big' && result !== 'reg') trackHistory();
-
+    trackHistory();
     updateStatus();
-    if(medals < 3) document.getElementById('spinBtn').disabled = true;
+    updateSpinButtonState();
   }
 
   function trackHistory() {
@@ -647,27 +620,31 @@
     document.getElementById('revealSettingBtn').style.display = 'none';
   }
 
-  function confirmWin() {
-    document.getElementById('gogoOverlay').classList.remove('show');
-    if(pendingWin){
-      const payout = PAYOUTS[pendingWin];
-      const isBig = pendingWin === 'big';
-      if(isBig) bigCount++; else regCount++;
-      medals += payout; netDiff += payout; totalWinMedals += payout;
+  function resolveBonus() {
+    if(!pendingWin) return;
+    const payout = PAYOUTS[pendingWin];
+    const isBig = pendingWin === 'big';
+    if(isBig) bigCount++; else regCount++;
+    medals += payout; netDiff += payout; totalWinMedals += payout;
 
-      const wd = document.getElementById('winDisplay');
-      wd.textContent = isBig ? `🎰 BIG BONUS!! +${PAYOUTS.big}枚` : `🎰 REG BONUS!! +96枚`;
-      wd.className = 'win-display ' + (isBig ? 'big' : 'reg');
+    const icons = ICONS[pendingWin];
+    ['r1','r2','r3'].forEach((id,i) => document.getElementById(id).textContent = icons[i]);
 
-      // 当たりログ：前回からのG数で表示してリセット
-      addLog(isBig ? `🎰 BIG当たり！+${PAYOUTS.big}枚` : '🎰 REG当たり！+96枚', isBig ? 'log-big' : 'log-reg', true, sinceLastHit);
-      sinceLastHit = 0;
-      trackHistory();
+    lampLit = true;
+    updateGogoLamp();
 
-      pendingWin = null;
-      updateStatus();
-      if(medals >= 3) document.getElementById('spinBtn').disabled = false;
-    }
+    const wd = document.getElementById('winDisplay');
+    wd.textContent = isBig ? `🎰 BIG BONUS!! +${PAYOUTS.big}枚` : `🎰 REG BONUS!! +96枚`;
+    wd.className = 'win-display ' + (isBig ? 'big' : 'reg');
+
+    // 当たりログ：前回からのG数で表示してリセット
+    addLog(isBig ? `🎰 BIG当たり！+${PAYOUTS.big}枚` : '🎰 REG当たり！+96枚', isBig ? 'log-big' : 'log-reg', true, sinceLastHit);
+    sinceLastHit = 0;
+    trackHistory();
+
+    pendingWin = null;
+    updateStatus();
+    updateSpinButtonState();
   }
 
   function addMedals() {
@@ -681,6 +658,7 @@
   }
 
   function cashOut() {
+    if(pendingWin){ alert('ボーナス確定演出中は精算できません'); return; }
     if(medals <= 0){ alert('精算するメダルがありません'); return; }
     const totalYen = medals * MEDAL_PRICE;
     const roundedYen = Math.floor(totalYen / 1000) * 1000;
@@ -797,11 +775,13 @@
     pendingWin=null; isSpinning=false; cashOutCount=0; bigCount=0; regCount=0; sinceLastHit=0;
     isSettingHidden=false;
     netDiff=0; fullHistory=[{ games:0, medals:0 }];
+    lampLit=false; totalBetIn=0;
     document.getElementById('log').innerHTML = '';
     document.getElementById('cashComment').textContent = '';
     document.getElementById('winDisplay').textContent = 'PRESS START';
     document.getElementById('winDisplay').className = 'win-display miss';
     ['r1','r2','r3'].forEach(id => document.getElementById(id).textContent = '🎰');
+    updateGogoLamp();
     document.getElementById('spinBtn').disabled = true;
     document.getElementById('tabsBar').classList.add('hidden');
     document.getElementById('machineArea').classList.add('hidden');
