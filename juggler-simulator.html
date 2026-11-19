@@ -157,8 +157,11 @@
     <option value="4" selected>設定4</option>
     <option value="5">設定5</option>
     <option value="6">設定6</option>
-    <option value="random">設定不明（ランダム）</option>
+    <option value="random">設定不明（完全ランダム：各1/6）</option>
+    <option value="normal">設定不明（通常営業の店）</option>
+    <option value="event">設定不明（赤字イベントの店）</option>
   </select>
+  <div id="storeModeNote" style="display:none;margin:-12px 0 16px;font-size:10px;line-height:1.6;color:var(--muted);text-align:left;"></div>
   <button class="money-btn" style="display:flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;" onclick="startGame()">🎮 ゲームスタート</button>
 
   <!-- スペック表 -->
@@ -368,10 +371,55 @@
   let lampLit=false; // GOGOランプ（リール上部の常設マーク）の点灯状態
   let totalBetIn=0; // 機械割計算用：実際に投入した合計メダル枚数（3枚/1枚スピンの合計）
 
+  // ---- 店の設定配分モード（100台あたりの台数比） ----
+  // 通常営業：6=1/100、5=1/75、4=1/30、3=1/10、2=1/5、残りは設定1
+  // 赤字イベント：高設定を厚く入れ、店全体の機械割が100%を超える配分
+  const SETTING_PAYOUT = { 1: 97.0, 2: 98.0, 3: 99.9, 4: 102.8, 5: 105.3, 6: 109.4 };
+  const STORE_MODES = {
+    normal: { label: '通常営業', weights: { 6: 1/100, 5: 1/75, 4: 1/30, 3: 1/10, 2: 1/5 } },
+    event:  { label: '赤字イベント', weights: { 6: 0.10, 5: 0.15, 4: 0.20, 3: 0.20, 2: 0.15 } },
+  };
+  function storeWeights(mode) {
+    const w = { ...STORE_MODES[mode].weights };
+    w[1] = 1 - Object.values(w).reduce((a, b) => a + b, 0);
+    return w;
+  }
+  function rollStoreSetting(mode) {
+    const w = storeWeights(mode);
+    let r = Math.random();
+    for (const st of [6, 5, 4, 3, 2, 1]) {
+      r -= w[st];
+      if (r < 0) return st;
+    }
+    return 1;
+  }
+  function storeExpectedPayout(mode) {
+    const w = storeWeights(mode);
+    return [1, 2, 3, 4, 5, 6].reduce((sum, st) => sum + w[st] * SETTING_PAYOUT[st], 0);
+  }
+  function updateStoreModeNote() {
+    const v = document.getElementById('settingSelect').value;
+    const el = document.getElementById('storeModeNote');
+    if (!STORE_MODES[v]) { el.style.display = 'none'; return; }
+    const w = storeWeights(v);
+    const parts = [6, 5, 4, 3, 2, 1].map(st => `設定${st}:${(w[st] * 100).toFixed(1)}%`).join(' / ');
+    const payout = storeExpectedPayout(v);
+    const profit = 100 - payout;
+    el.innerHTML = `${parts}<br>店全体の平均機械割 <b style="color:var(--gold);">${payout.toFixed(2)}%</b>（店の${profit >= 0 ? '利益' : '赤字'} 投入メダルの${Math.abs(profit).toFixed(2)}%）`;
+    el.style.display = '';
+  }
+  document.getElementById('settingSelect').addEventListener('change', updateStoreModeNote);
+
   function startGame() {
     const settingValue = document.getElementById('settingSelect').value;
-    currentSetting = settingValue === 'random' ? Math.floor(Math.random() * 6) + 1 : Number(settingValue);
-    isSettingHidden = settingValue === 'random';
+    if (settingValue === 'random') {
+      currentSetting = Math.floor(Math.random() * 6) + 1;
+    } else if (STORE_MODES[settingValue]) {
+      currentSetting = rollStoreSetting(settingValue);
+    } else {
+      currentSetting = Number(settingValue);
+    }
+    isSettingHidden = settingValue === 'random' || !!STORE_MODES[settingValue];
     updateSettingDisplay();
     wallet = 0;
     document.getElementById('setupScreen').classList.add('hidden');
