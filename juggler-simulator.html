@@ -543,7 +543,34 @@
   function switchTab(name) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
-    if(name === 'batch') drawSlumpGraph();
+    if(name === 'batch'){ renderAnalysisStats(); drawSlumpGraph(); }
+  }
+
+  // 分析タブの各指標を現在の累計（プレイタブで回した分＋一括実行分）で表示する
+  function renderAnalysisStats() {
+    if(totalSpin === 0){ resetAnalysisNumbers(); return; }
+    const total = bigCount + regCount;
+    document.getElementById('analyzeBig').textContent = `${bigCount}回`;
+    document.getElementById('analyzeReg').textContent = `${regCount}回`;
+    document.getElementById('analyzeTotal').textContent = `${total}回`;
+    document.getElementById('analyzeRate').textContent = total > 0 ? `1/${Math.round(totalSpin/total)}` : '-';
+    document.getElementById('analyzeFinalMedals').textContent = `${netDiff >= 0 ? '+' : ''}${netDiff}枚`;
+    document.getElementById('analyzeGames').textContent = `${totalSpin}G`;
+    document.getElementById('analyzeKikaiwari').textContent = totalBetIn > 0 ? `${(((totalBetIn + netDiff) / totalBetIn) * 100).toFixed(2)}%` : '-';
+    const yen = netDiff * MEDAL_PRICE;
+    const yenEl = document.getElementById('analyzeYen');
+    yenEl.textContent = yen < 0 ? `-¥${Math.abs(yen).toLocaleString()}` : `¥${yen.toLocaleString()}`;
+    yenEl.style.color = yen < 0 ? 'var(--red)' : 'var(--green)';
+    document.getElementById('analyzeHeldMedals').textContent = `${medals}枚`;
+  }
+
+  function resetAnalysisNumbers() {
+    ['analyzeBig','analyzeReg','analyzeTotal','analyzeRate','analyzeFinalMedals','analyzeGames','analyzeKikaiwari','analyzeHeldMedals'].forEach(id => {
+      document.getElementById(id).textContent = '-';
+    });
+    const yenEl = document.getElementById('analyzeYen');
+    yenEl.textContent = '-';
+    yenEl.style.color = '';
   }
 
   function runBatch() {
@@ -595,19 +622,7 @@
       medals = 0;
     }
 
-    const total = bigCount + regCount;
-    document.getElementById('analyzeBig').textContent = `${bigCount}回`;
-    document.getElementById('analyzeReg').textContent = `${regCount}回`;
-    document.getElementById('analyzeTotal').textContent = `${total}回`;
-    document.getElementById('analyzeRate').textContent = total > 0 ? `1/${Math.round(totalSpin/total)}` : '-';
-    document.getElementById('analyzeFinalMedals').textContent = `${netDiff >= 0 ? '+' : ''}${netDiff}枚`;
-    document.getElementById('analyzeGames').textContent = `${totalSpin}G`;
-    document.getElementById('analyzeKikaiwari').textContent = totalBetIn > 0 ? `${(((totalBetIn + netDiff) / totalBetIn) * 100).toFixed(2)}%` : '-';
-    const yen = netDiff * MEDAL_PRICE;
-    const yenEl = document.getElementById('analyzeYen');
-    yenEl.textContent = yen < 0 ? `-¥${Math.abs(yen).toLocaleString()}` : `¥${yen.toLocaleString()}`;
-    yenEl.style.color = yen < 0 ? 'var(--red)' : 'var(--green)';
-    document.getElementById('analyzeHeldMedals').textContent = `${medals}枚`;
+    renderAnalysisStats();
 
     updateStatus();
     updateSpinButtonState();
@@ -771,6 +786,8 @@
     updateKoyakuStat('Grape', 'grape', grapeCount);
     updateKoyakuStat('Cherry', 'cherry', cherryCount);
     renderBonusHistory();
+    // 分析タブを開いている時はプレイ中の変化もそのまま反映
+    if(document.getElementById('tab-batch').classList.contains('active')) renderAnalysisStats();
   }
 
   function recordBonus(type) {
