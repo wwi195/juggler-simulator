@@ -38,6 +38,12 @@
   .stat-value.red { color: var(--red); }
   .stat-value.green { color: var(--green); }
 
+  /* 小役カウンター収納：押している間だけ開く */
+  .koyaku-drawer-btn { width: 100%; margin: -6px 0 12px; padding: 6px; background: var(--panel); border: 1px dashed #4a2c90; border-radius: 8px; color: var(--muted); font-size: 11px; letter-spacing: 1px; text-align: center; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none; cursor: pointer; }
+  .koyaku-drawer-btn.open { border-style: solid; border-color: #8a5cf0; color: #cc88ff; }
+  .koyaku-drawer { display: none; grid-template-columns: repeat(2, 1fr); gap: 6px; margin: -6px 0 12px; }
+  .koyaku-drawer.open { display: grid; }
+  .koyaku-setting { font-size: 10px; color: #cc88ff; margin-top: 2px; }
   .reel-area { background: #000; border: 3px solid #3a2060; border-radius: 8px; padding: 12px; margin-bottom: 16px; display: flex; justify-content: center; align-items: center; gap: 12px; min-height: 80px; }
   .result-icon { width: 48px; height: 48px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 28px; background: #111; border: 1px solid #333; }
   .result-icon.spin { animation: spinIcon 0.1s linear infinite; }
@@ -197,6 +203,23 @@
     </div>
   </div>
 
+  <!-- 小役カウンター（ぶどう・チェリー）。ボタンを押している間だけ表示 -->
+  <div class="koyaku-drawer-btn" id="koyakuBtn">▼ 小役カウンター（押している間だけ表示）</div>
+  <div class="koyaku-drawer" id="koyakuDrawer">
+    <div class="stat">
+      <div class="stat-label">🍇 ぶどう</div>
+      <div class="stat-value" id="statGrape" style="font-size:14px;color:var(--green);">0回</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:2px;" id="rateGrape">-</div>
+      <div class="koyaku-setting" id="settingGrape">-</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">🍒 チェリー</div>
+      <div class="stat-value" id="statCherry" style="font-size:14px;color:var(--red);">0回</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:2px;" id="rateCherry">-</div>
+      <div class="koyaku-setting" id="settingCherry">-</div>
+    </div>
+  </div>
+
   <div class="gogo-lamp-mini" id="gogoLampMini"><img class="gogo-lamp-img" src="gogo-lamp.png" alt="GOGOランプ"></div>
 
   <div class="reel-area">
@@ -299,6 +322,7 @@
 
   let medals=0, wallet=0, totalSpent=0, totalSpin=0, totalWinMedals=0;
   let bigCount=0, regCount=0;
+  let grapeCount=0, cherryCount=0; // 単独ぶどう・単独チェリー（ボーナス重複チェリーは除く）
   let sinceLastHit=0; // 前回当たりからのG数
   let pendingWin=null, isSpinning=false, cashOutCount=0;
   let currentSetting=4; // セットアップ画面で選択、ゲーム中は固定
@@ -431,11 +455,13 @@
       wd.className = 'win-display replay';
       addLog('🔄 リプレイ', 'log-replay');
     } else if(result === 'grape'){
+      grapeCount++;
       medals += PAYOUTS.grape; netDiff += PAYOUTS.grape; totalWinMedals += PAYOUTS.grape;
       wd.textContent = '🍇 ぶどう +8枚';
       wd.className = 'win-display grape';
       addLog('🍇 ぶどう +8枚', 'log-grape');
     } else if(result === 'cherry'){
+      cherryCount++;
       medals += PAYOUTS.cherry; netDiff += PAYOUTS.cherry; totalWinMedals += PAYOUTS.cherry;
       wd.textContent = '🍒 チェリー +2枚';
       wd.className = 'win-display cherry';
@@ -510,9 +536,11 @@
         medals += 3; netDiff += 3;
         trackHistory();
       } else if(result === 'grape'){
+        grapeCount++;
         medals += PAYOUTS.grape; netDiff += PAYOUTS.grape; totalWinMedals += PAYOUTS.grape;
         trackHistory();
       } else if(result === 'cherry'){
+        cherryCount++;
         medals += PAYOUTS.cherry; netDiff += PAYOUTS.cherry; totalWinMedals += PAYOUTS.cherry;
         trackHistory();
       } else if(result === 'bell'){
@@ -698,6 +726,32 @@
     document.getElementById('rateTotal').textContent = total > 0 && totalSpin > 0 ? `1/${Math.round(totalSpin/total)}` : '-';
     document.getElementById('rateBig').textContent = bigCount > 0 && totalSpin > 0 ? `1/${Math.round(totalSpin/bigCount)}` : '-';
     document.getElementById('rateReg').textContent = regCount > 0 && totalSpin > 0 ? `1/${Math.round(totalSpin/regCount)}` : '-';
+
+    // 小役カウンター
+    updateKoyakuStat('Grape', 'grape', grapeCount);
+    updateKoyakuStat('Cherry', 'cherry', cherryCount);
+  }
+
+  // 実測確率が最も近い設定（設定別確率との差が最小）を返す
+  function nearestSetting(key, observedProb) {
+    let best = 1, bestDiff = Infinity;
+    for (let st = 1; st <= 6; st++) {
+      const diff = Math.abs(SETTING_PROBS[st][key] - observedProb);
+      if (diff < bestDiff) { bestDiff = diff; best = st; }
+    }
+    return best;
+  }
+
+  function updateKoyakuStat(suffix, key, count) {
+    document.getElementById('stat' + suffix).textContent = `${count}回`;
+    if (count > 0 && totalSpin > 0) {
+      const denom = totalSpin / count;
+      document.getElementById('rate' + suffix).textContent = `1/${denom.toFixed(2)}`;
+      document.getElementById('setting' + suffix).textContent = `設定${nearestSetting(key, count / totalSpin)}相当`;
+    } else {
+      document.getElementById('rate' + suffix).textContent = '-';
+      document.getElementById('setting' + suffix).textContent = '-';
+    }
   }
 
   function addLog(msg, cls, useHitG=false, hitG=null) {
@@ -716,7 +770,7 @@
 
     let spin = 0;
     let gainMedals = 0;
-    let grapeCount=0, cherryCount=0, replayCount=0, bellCount=0, missCount=0;
+    let skipGrape=0, skipCherry=0, replayCount=0, bellCount=0, missCount=0;
     let hitResult = null;
     let hitCherryOverlap = false;
     let tempMedals = medals;
@@ -736,7 +790,7 @@
         hitResult = result;
         hitCherryOverlap = Math.random() < CHERRY_OVERLAP_RATE[currentSetting][result];
         if(hitCherryOverlap){
-          tempMedals += PAYOUTS.cherry; netDiff += PAYOUTS.cherry; gainMedals += PAYOUTS.cherry; cherryCount++;
+          tempMedals += PAYOUTS.cherry; netDiff += PAYOUTS.cherry; gainMedals += PAYOUTS.cherry; skipCherry++;
         } else {
           missCount++;
         }
@@ -746,9 +800,9 @@
         tempMedals += 3; netDiff += 3;
         replayCount++;
       } else if(result === 'grape'){
-        tempMedals += PAYOUTS.grape; netDiff += PAYOUTS.grape; gainMedals += PAYOUTS.grape; grapeCount++;
+        tempMedals += PAYOUTS.grape; netDiff += PAYOUTS.grape; gainMedals += PAYOUTS.grape; skipGrape++; grapeCount++;
       } else if(result === 'cherry'){
-        tempMedals += PAYOUTS.cherry; netDiff += PAYOUTS.cherry; gainMedals += PAYOUTS.cherry; cherryCount++;
+        tempMedals += PAYOUTS.cherry; netDiff += PAYOUTS.cherry; gainMedals += PAYOUTS.cherry; skipCherry++; cherryCount++;
       } else if(result === 'bell'){
         tempMedals += PAYOUTS.bell; netDiff += PAYOUTS.bell; gainMedals += PAYOUTS.bell; bellCount++;
       } else {
@@ -762,7 +816,7 @@
 
     // ログにまとめて表示
     sinceLastHit += spin;
-    const summary = `⏩ ${spin}G消化 / 🍇${grapeCount} 🍒${cherryCount} 🔄${replayCount} 🔔${bellCount} ✕${missCount}`;
+    const summary = `⏩ ${spin}G消化 / 🍇${skipGrape} 🍒${skipCherry} 🔄${replayCount} 🔔${bellCount} ✕${missCount}`;
     addLog(summary, 'log-replay');
 
     if(hitResult){
@@ -794,6 +848,7 @@
   function resetGame() {
     medals=0; wallet=0; totalSpent=0; totalSpin=0; totalWinMedals=0;
     pendingWin=null; isSpinning=false; cashOutCount=0; bigCount=0; regCount=0; sinceLastHit=0;
+    grapeCount=0; cherryCount=0;
     isSettingHidden=false;
     netDiff=0; fullHistory=[{ games:0, medals:0 }];
     lampLit=false; totalBetIn=0;
@@ -813,6 +868,16 @@
     document.getElementById('setupScreen').classList.remove('hidden');
     updateStatus();
   }
+  // 小役カウンター：押している間だけ開く
+  (function setupKoyakuDrawer(){
+    const btn = document.getElementById('koyakuBtn');
+    const drawer = document.getElementById('koyakuDrawer');
+    const open = (e) => { e.preventDefault(); btn.classList.add('open'); drawer.classList.add('open'); };
+    const close = () => { btn.classList.remove('open'); drawer.classList.remove('open'); };
+    btn.addEventListener('pointerdown', open);
+    ['pointerup','pointercancel','pointerleave'].forEach(ev => btn.addEventListener(ev, close));
+    btn.addEventListener('contextmenu', (e) => e.preventDefault());
+  })();
 </script>
   <script src="https://wwi195.github.io/site-analytics/tracker.js?v=1" data-site-id="juggler-simulator"></script>
 </body>
