@@ -97,6 +97,32 @@
   /* ログ */
   .log-wrap { width: 100%; max-width: 360px; background: var(--panel); border: 1px solid #2a1860; border-radius: 8px; padding: 10px; max-height: 140px; overflow-y: auto; font-size: 11px; line-height: 1.8; }
   .log-wrap::-webkit-scrollbar { width: 4px; }
+
+  /* ボーナス履歴グラフ（データランプ風） */
+  .hist-wrap { width: 100%; max-width: 360px; margin-top: 10px; background: var(--panel); border: 1px solid #2a1860; border-radius: 8px; padding: 8px 8px 6px; }
+  .hist-title { font-size: 10px; color: var(--muted); letter-spacing: 1px; margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .hist-body { display: flex; }
+  .hist-axis { display: flex; flex-direction: column-reverse; justify-content: flex-start; width: 24px; flex-shrink: 0; padding-bottom: 30px; }
+  .hist-axis span { height: 16px; font-size: 8px; color: var(--muted); text-align: right; padding-right: 3px; line-height: 16px; transform: translateY(8px); }
+  .hist-scroll { flex: 1; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+  .hist-scroll::-webkit-scrollbar { height: 4px; }
+  .hist-scroll::-webkit-scrollbar-thumb { background: #3a2060; border-radius: 2px; }
+  .hist-cols { display: flex; gap: 4px; min-height: 160px; padding-bottom: 2px; }
+  .hist-col { width: 24px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+  .hist-g { font-size: 8px; color: var(--muted); margin-bottom: 2px; white-space: nowrap; }
+  .hist-more { font-size: 10px; line-height: 10px; margin-bottom: 1px; }
+  .hist-block { width: 20px; height: 14px; margin-top: 2px; border-radius: 2px; }
+  .hist-col.big .hist-block { background: linear-gradient(180deg, #ff6b6b, #c62828); box-shadow: 0 0 3px rgba(255,80,80,0.5); }
+  .hist-col.reg .hist-block { background: linear-gradient(180deg, #7fb2ff, #2b5fc4); box-shadow: 0 0 3px rgba(80,140,255,0.5); }
+  .hist-col.big .hist-more { color: #ff6b6b; }
+  .hist-col.reg .hist-more { color: #7fb2ff; }
+  .hist-col.now .hist-block { background: transparent; border: 1px dashed #8a7ab0; }
+  .hist-type { margin-top: 4px; font-size: 9px; font-weight: bold; height: 12px; }
+  .hist-col.big .hist-type { color: #ff6b6b; }
+  .hist-col.reg .hist-type { color: #7fb2ff; }
+  .hist-col.now .hist-type { color: var(--muted); }
+  .hist-idx { font-size: 8px; color: var(--muted); height: 12px; }
+  .hist-empty { font-size: 10px; color: var(--muted); padding: 20px 4px; }
   .log-wrap::-webkit-scrollbar-thumb { background: #3a2060; border-radius: 2px; }
   .log-miss { color: var(--muted); }
   .log-big { color: var(--gold); font-weight: bold; }
@@ -249,6 +275,14 @@
 <div class="log-wrap hidden" id="logWrap">
   <div id="log"></div>
 </div>
+<!-- ボーナス履歴グラフ：1ブロック=100G、700G以上は7ブロック＋▲。左が新しく、横スクロールで過去へ -->
+<div class="hist-wrap hidden" id="histWrap">
+  <div class="hist-title"><span>ボーナス履歴（1ブロック=100G）</span><span>← 新しい ｜ 過去 →</span></div>
+  <div class="hist-body">
+    <div class="hist-axis"><span>0</span><span>100</span><span>200</span><span>300</span><span>400</span><span>500</span><span>600</span><span>700</span></div>
+    <div class="hist-scroll" id="histScroll"><div class="hist-cols" id="histCols"></div></div>
+  </div>
+</div>
 </div>
 
 <div class="tab-panel" id="tab-batch">
@@ -325,6 +359,7 @@
   let bigCount=0, regCount=0;
   let grapeCount=0, cherryCount=0; // 単独ぶどう・単独チェリー（ボーナス重複チェリーは除く）
   let sinceLastHit=0; // 前回当たりからのG数
+  let bonusHistory=[]; // [{type:'big'|'reg', games}]（新しい順）
   let pendingWin=null, isSpinning=false, cashOutCount=0;
   let currentSetting=4; // セットアップ画面で選択、ゲーム中は固定
   let isSettingHidden=false; // 「設定不明」でプレイ開始した場合true。答え合わせボタンでfalseに戻る
@@ -343,6 +378,7 @@
     document.getElementById('tabsBar').classList.remove('hidden');
     document.getElementById('machineArea').classList.remove('hidden');
     document.getElementById('logWrap').classList.remove('hidden');
+    document.getElementById('histWrap').classList.remove('hidden');
     updateStatus();
   }
 
@@ -531,6 +567,7 @@
         const payout = PAYOUTS[result];
         if(result === 'big'){ bigCount++; } else { regCount++; }
         medals += payout; netDiff += payout; totalWinMedals += payout;
+        recordBonus(result);
         sinceLastHit = 0;
         trackHistory();
       } else if(result === 'replay'){
@@ -670,6 +707,7 @@
 
     // 当たりログ：前回からのG数で表示してリセット
     addLog(isBig ? `🎰 BIG当たり！+${PAYOUTS.big}枚` : '🎰 REG当たり！+96枚', isBig ? 'log-big' : 'log-reg', true, sinceLastHit);
+    recordBonus(isBig ? 'big' : 'reg');
     sinceLastHit = 0;
     trackHistory();
 
@@ -732,6 +770,35 @@
     // 小役カウンター
     updateKoyakuStat('Grape', 'grape', grapeCount);
     updateKoyakuStat('Cherry', 'cherry', cherryCount);
+    renderBonusHistory();
+  }
+
+  function recordBonus(type) {
+    bonusHistory.unshift({ type, games: sinceLastHit });
+  }
+
+  // ボーナス履歴グラフ：左端に現在のハマり（点線）、その右に1回前・2回前…
+  const HIST_BLOCK_G = 100;
+  const HIST_MAX_BLOCKS = 7;
+  function histColHtml(cls, games, typeLabel, idxLabel) {
+    const blocks = Math.min(HIST_MAX_BLOCKS, Math.max(1, Math.ceil(games / HIST_BLOCK_G)));
+    const more = games >= HIST_BLOCK_G * HIST_MAX_BLOCKS ? '<div class="hist-more">▲</div>' : '';
+    return `<div class="hist-col ${cls}">
+      <div class="hist-g">${games}</div>${more}
+      ${'<div class="hist-block"></div>'.repeat(blocks)}
+      <div class="hist-type">${typeLabel}</div>
+      <div class="hist-idx">${idxLabel}</div>
+    </div>`;
+  }
+  function renderBonusHistory() {
+    const el = document.getElementById('histCols');
+    if (!el) return;
+    let html = histColHtml('now', sinceLastHit, '現在', '');
+    bonusHistory.forEach((b, i) => {
+      html += histColHtml(b.type, b.games, b.type === 'big' ? 'BIG' : 'REG', `${i + 1}`);
+    });
+    if (bonusHistory.length === 0) html += '<div class="hist-empty">まだボーナスがありません</div>';
+    el.innerHTML = html;
   }
 
   // 実測確率が最も近い設定（設定別確率との差が最小）を返す
@@ -850,7 +917,7 @@
   function resetGame() {
     medals=0; wallet=0; totalSpent=0; totalSpin=0; totalWinMedals=0;
     pendingWin=null; isSpinning=false; cashOutCount=0; bigCount=0; regCount=0; sinceLastHit=0;
-    grapeCount=0; cherryCount=0;
+    grapeCount=0; cherryCount=0; bonusHistory=[];
     isSettingHidden=false;
     netDiff=0; fullHistory=[{ games:0, medals:0 }];
     lampLit=false; totalBetIn=0;
@@ -864,6 +931,7 @@
     document.getElementById('tabsBar').classList.add('hidden');
     document.getElementById('machineArea').classList.add('hidden');
     document.getElementById('logWrap').classList.add('hidden');
+    document.getElementById('histWrap').classList.add('hidden');
     switchTab('play');
     clearGraph();
     resetAnalysisStats();
