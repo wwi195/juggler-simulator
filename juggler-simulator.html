@@ -177,6 +177,7 @@
     <div class="stat">
       <div class="stat-label">ボーナス間</div>
       <div class="stat-value" id="totalSpin">0</div>
+      <div style="font-size:9px;color:var(--muted);margin-top:2px;">総回転 <span id="allSpin">0</span>G</div>
     </div>
     <div class="stat">
       <div class="stat-label">持ちメダル</div>
@@ -714,6 +715,7 @@
     document.getElementById('medals').textContent = `${medals}枚`;
     document.getElementById('medalsStat').textContent = `${medals}枚`;
     document.getElementById('totalSpin').textContent = sinceLastHit;
+    document.getElementById('allSpin').textContent = totalSpin.toLocaleString();
     const walletEl = document.getElementById('wallet');
     walletEl.textContent = `¥${wallet.toLocaleString()}`;
     walletEl.className = 'stat-value ' + (wallet >= 0 ? 'green' : 'red');
