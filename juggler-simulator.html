@@ -409,6 +409,11 @@
     el.style.display = '';
   }
   document.getElementById('settingSelect').addEventListener('change', updateStoreModeNote);
+  // モード名の横に店全体の機械割（四捨五入）を表記
+  Object.keys(STORE_MODES).forEach(mode => {
+    const opt = document.querySelector(`#settingSelect option[value="${mode}"]`);
+    if (opt) opt.textContent = `設定不明（${STORE_MODES[mode].label}の店）機械割${Math.round(storeExpectedPayout(mode))}%`;
+  });
 
   function startGame() {
     const settingValue = document.getElementById('settingSelect').value;
